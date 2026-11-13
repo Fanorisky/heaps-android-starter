@@ -15,6 +15,7 @@ class Lifecycle {
  static inline function get_focused() return store.focused;
  public static function subscribe(callback:LifecycleEvent->Void):Void->Void return store.subscribe(callback);
  @:allow(heapsandroid.Android) static function ingest(event:Int) store.ingest(event);
+ @:allow(heapsandroid.Android) static function reconcile(snapshot:Int) store.reconcile(snapshot);
  @:allow(heapsandroid.Android) static function dispatch() store.dispatch();
  @:allow(heapsandroid.Android) static function reset() store = new LifecycleStore();
 }

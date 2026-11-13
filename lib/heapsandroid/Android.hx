@@ -21,6 +21,7 @@ class Android {
   try {
    var event = Native.pollLifecycle();
    while(event >= 0) { Lifecycle.ingest(event); if(event == 1) Keyboard.background(); event = Native.pollLifecycle(); }
+   Lifecycle.reconcile(Native.lifecycleState());
    Audio.poll();
    Lifecycle.dispatch();
    Keyboard.poll();

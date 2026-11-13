@@ -13,7 +13,14 @@ class PlatformState {
  SensorSlot sensors[2];
  void push(int event) {
   if(count && events[(head+count-1)%32]==event) return;
-  if(count==32) {head=(head+1)%32;count--;}
+  if(count==32) {
+   // Coalesce within the same state dimension so focus churn cannot erase
+   // the latest foreground transition (and foreground churn preserves focus).
+   int drop=0;while(drop<count && (events[(head+drop)%32]<2)!=(event<2))drop++;
+   if(drop==count)drop=0;
+   for(int i=drop;i<count-1;i++)events[(head+i)%32]=events[(head+i+1)%32];
+   count--;
+  }
   events[(head+count)%32]=event;count++;
  }
  public:

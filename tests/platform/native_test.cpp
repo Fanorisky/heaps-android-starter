@@ -21,6 +21,10 @@ int main() {
  const uint32_t invalidScalar[] = {0xBDBFEF,0xBDBFEF,0xBDBFEF};
  const unsigned char invalidBytes[]={0xc0,0xaf,0xed,0xa0,0x80,0xf4,0x90,0x80,0x80};
  commit(invalidBytes,sizeof(invalidBytes),invalidScalar,3);
+ heapsandroid::PlatformState overflow;
+ overflow.setForeground(true);
+ for(int i=0;i<1000;i++) overflow.setFocused((i&1)==0);
+ assert(overflow.poll()==0); // Focus churn must not lose the latest foreground transition.
  heapsandroid::PlatformState state;
  state.setForeground(true); state.setForeground(true); state.setFocused(true);
  assert(state.poll()==0); assert(state.poll()==2); assert(state.poll()==-1);

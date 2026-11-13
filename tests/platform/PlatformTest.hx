@@ -22,6 +22,11 @@ class PlatformTest {
   state.subscribe(e -> { if(second != null) second(); });
   second = state.subscribe(e -> seen.push(e));
   state.ingest(0); state.dispatch(); eq(seen.length, 2);
+  // Native overflow can discard an older foreground event; its latest snapshot repairs state.
+  var recovered = new LifecycleStore(); var recovery = [];
+  recovered.subscribe(e -> recovery.push(e)); recovered.reconcile(3); recovered.dispatch();
+  eq(recovered.foreground, true); eq(recovered.focused, true); eq(recovery.join(","), "0,2");
+  recovered.reconcile(3); recovered.dispatch(); eq(recovery.length, 2);
   var b = haxe.io.Bytes.alloc(32);
   b.setDouble(0, 1.5); b.setDouble(8, -2.25); b.setDouble(16, 0.125);
   b.setInt32(24, 0x89ABCDEF); b.setInt32(28, 0x12345678);

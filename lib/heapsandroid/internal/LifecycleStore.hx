@@ -26,6 +26,13 @@ class LifecycleStore {
    case FocusLost: focused = false;
   }
  }
+ /** Repair state if a bounded native queue dropped an older transition. */
+ public function reconcile(snapshot:Int):Void {
+  var nextForeground = (snapshot & 1) != 0;
+  var nextFocused = (snapshot & 2) != 0;
+  if(foreground != nextForeground) ingest(nextForeground ? 0 : 1);
+  if(focused != nextFocused) ingest(nextFocused ? 2 : 3);
+ }
  public function dispatch():Void {
   var pending = events; events = [];
   for(event in pending) for(listener in listeners.copy()) if(listener.active) listener.callback(event);
