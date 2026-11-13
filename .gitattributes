@@ -1,0 +1,2 @@
+# Patch hunks preserve upstream tabs/CRLF and diff context prefixes byte-for-byte.
+*.patch -text -whitespace
