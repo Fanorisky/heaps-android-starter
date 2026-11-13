@@ -8,31 +8,30 @@
  
  #if defined(_WIN32) || defined(__ANDROID__) || defined(HL_IOS) || defined(HL_TVOS)
  #	include <SDL.h>
-@@ -99,6 +100,33 @@
+@@ -99,6 +100,32 @@
  	vbyte* dropFile;
  } event_data;
  
 +/* Keep the rest of an SDL commit ahead of later keyboard/window events. */
 +static SDL_SpinLock heaps_text_lock;
-+static SDL_TextInputEvent heaps_text_commit;
-+static size_t heaps_text_position, heaps_text_length;
++static heaps_text_buffer heaps_text_commit;
 +
 +void sdl_cancel_text_input(void) {
 + SDL_AtomicLock(&heaps_text_lock);
-+ heaps_text_position = heaps_text_length = 0;
-+ SDL_AtomicUnlock(&heaps_text_lock);
-+ SDL_FlushEvents(SDL_TEXTEDITING, SDL_TEXTINPUT);
++ heaps_text_cancel(&heaps_text_commit);
++ /* Keep generation publication and SDL queue cancellation atomic to poll snapshots. */
 + SDL_StopTextInput();
++ SDL_FlushEvents(SDL_TEXTEDITING, SDL_TEXTINPUT);
++ SDL_AtomicUnlock(&heaps_text_lock);
 +}
 +
 +static bool heaps_text_next(event_data *event) {
 + uint32_t packed;
 + SDL_AtomicLock(&heaps_text_lock);
-+ int found = heaps_utf8_next((unsigned char*)heaps_text_commit.text,
-+  heaps_text_length, &heaps_text_position, &packed);
++ int found = heaps_text_pop(&heaps_text_commit, &packed);
 + if (found) {
 +  event->type = TextInput;
-+  event->window = heaps_text_commit.windowID;
++  event->window = heaps_text_commit.window;
 +  event->keyCode = (int)packed;
 + }
 + SDL_AtomicUnlock(&heaps_text_lock);
@@ -42,32 +41,43 @@
  static bool isGlOptionsSet = false;
  
  HL_PRIM bool HL_NAME(init_once)() {
-@@ -167,6 +195,7 @@
+@@ -167,8 +194,13 @@
  }
  
  HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 +	if (heaps_text_next(event)) return true;
  	while (true) {
  		SDL_Event e;
++		uint64_t text_generation;
++		SDL_AtomicLock(&heaps_text_lock);
++		text_generation = heaps_text_commit.generation;
++		SDL_AtomicUnlock(&heaps_text_lock);
  		if (SDL_PollEvent(&e) == 0) break;
-@@ -291,10 +320,12 @@
+ 		switch (e.type) {
+ 		case SDL_QUIT:
+@@ -290,12 +322,15 @@
+ 		case SDL_TEXTEDITING:
  			// skip
  			continue;
- 		case SDL_TEXTINPUT:
+-		case SDL_TEXTINPUT:
 -			event->type = TextInput;
 -			event->window = e.text.windowID;
 -			event->keyCode = *(int*)e.text.text;
 -			event->keyCode &= e.text.text[0] ? e.text.text[1] ? e.text.text[2] ? e.text.text[3] ? 0xFFFFFFFF : 0xFFFFFF : 0xFFFF : 0xFF : 0;
+-			break;
++		case SDL_TEXTINPUT: {
++			size_t length = 0;
++			while (length < sizeof(e.text.text) && e.text.text[length]) length++;
 +			SDL_AtomicLock(&heaps_text_lock);
-+			heaps_text_commit = e.text;
-+			heaps_text_position = heaps_text_length = 0;
-+			while (heaps_text_length < sizeof(e.text.text) && e.text.text[heaps_text_length]) heaps_text_length++;
++			int installed = heaps_text_install(&heaps_text_commit, e.text.text, length, e.text.windowID, text_generation);
 +			SDL_AtomicUnlock(&heaps_text_lock);
-+			if (!heaps_text_next(event)) continue;
- 			break;
++			if (!installed || !heaps_text_next(event)) continue;
++			break;
++		}
  		case SDL_CONTROLLERDEVICEADDED:
  			event->type = GControllerAdded;
-@@ -448,7 +479,7 @@
+ 			event->reference = e.jdevice.which;
+@@ -448,7 +483,7 @@
  	if( enable )
  		SDL_StartTextInput();
  	else
@@ -78,11 +88,12 @@
  HL_PRIM int HL_NAME(set_relative_mouse_mode)(bool enable) {
 --- /dev/null
 +++ b/hashlink/libs/sdl/utf8_packet.h
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,46 @@
 +#ifndef HEAPS_UTF8_PACKET_H
 +#define HEAPS_UTF8_PACKET_H
 +#include <stddef.h>
 +#include <stdint.h>
++#include <string.h>
 +/* Consume one Unicode scalar and preserve the little-endian packed UTF8
 + * representation decoded by hxd.Window. Malformed maximal subsequences yield
 + * the packed UTF8 replacement character; reads never exceed length. */
@@ -102,5 +113,25 @@
 + *packed=0x00bdbfef;
 + if(valid){*packed=0;for(int i=0;i<width;i++)*packed|=(uint32_t)text[start+i]<<(i*8);}
 + *position=end;return 1;
++}
++/* Caller serializes these operations with SDL's text lock. Generation is
++ * captured before polling; installation rejects a commit popped before cancel. */
++typedef struct {
++ uint64_t generation;
++ unsigned char text[32];
++ size_t position, length;
++ int window;
++} heaps_text_buffer;
++static inline void heaps_text_cancel(heaps_text_buffer *state) {
++ state->generation++;state->position=state->length=0;
++}
++static inline int heaps_text_install(heaps_text_buffer *state, const char *text,
++ size_t length, int window, uint64_t observed_generation) {
++ if(state->generation!=observed_generation)return 0;
++ if(length>sizeof(state->text))length=sizeof(state->text);
++ memcpy(state->text,text,length);state->position=0;state->length=length;state->window=window;return 1;
++}
++static inline int heaps_text_pop(heaps_text_buffer *state, uint32_t *packed) {
++ return heaps_utf8_next(state->text,state->length,&state->position,packed);
 +}
 +#endif

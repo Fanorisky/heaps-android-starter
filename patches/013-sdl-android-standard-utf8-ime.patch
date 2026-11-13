@@ -1,0 +1,76 @@
+--- a/sdl/src/core/android/SDL_android.c
++++ b/sdl/src/core/android/SDL_android.c
+@@ -19,6 +19,7 @@
+   3. This notice may not be removed or altered from any source distribution.
+ */
+ #include "../../SDL_internal.h"
++#include "SDL_heaps_utf16.h"
+ 
+ #include "SDL_stdinc.h"
+ #include "SDL_atomic.h"
+@@ -1301,11 +1302,27 @@
+     JNIEnv *env, jclass cls,
+     jstring text, jint newCursorPosition)
+ {
+-    const char *utftext = (*env)->GetStringUTFChars(env, text, NULL);
+-
+-    SDL_SendKeyboardText(utftext);
+-
+-    (*env)->ReleaseStringUTFChars(env, text, utftext);
++    if (!text) return;
++    jsize length = (*env)->GetStringLength(env, text);
++    const jchar *chars = (*env)->GetStringChars(env, text, NULL);
++    if (!chars) return; /* JNI leaves allocation failure pending. */
++    /* Three bytes per UTF16 unit also bounds four-byte surrogate pairs. */
++    size_t capacity = (size_t)length;
++    if (capacity > (SIZE_MAX - 1) / 3) {
++        (*env)->ReleaseStringChars(env, text, chars);
++        SDL_OutOfMemory();
++        return;
++    }
++    capacity = capacity * 3 + 1;
++    char *utftext = (char *)SDL_malloc(capacity);
++    size_t written;
++    if (utftext && SDL_HeapsUTF16ToUTF8((const uint16_t *)chars, (size_t)length, utftext, capacity, &written)) {
++        SDL_SendKeyboardText(utftext);
++    } else if (!utftext) {
++        SDL_OutOfMemory();
++    }
++    SDL_free(utftext);
++    (*env)->ReleaseStringChars(env, text, chars);
+ }
+ 
+ JNIEXPORT void JNICALL SDL_JAVA_INTERFACE_INPUT_CONNECTION(nativeGenerateScancodeForUnichar)(
+--- /dev/null
++++ b/sdl/src/core/android/SDL_heaps_utf16.h
+@@ -0,0 +1,30 @@
++#ifndef SDL_HEAPS_UTF16_H
++#define SDL_HEAPS_UTF16_H
++#include <stddef.h>
++#include <stdint.h>
++/* Java strings contain UTF16, whereas SDL_SendKeyboardText expects standard
++ * UTF8. JNI GetStringUTFChars would encode surrogate pairs as CESU8. */
++static inline int SDL_HeapsUTF16ToUTF8(const uint16_t *text, size_t length,
++ char *out, size_t capacity, size_t *written) {
++ size_t position=0;
++ if(!out || !written || (!text && length))return 0;
++ for(size_t i=0;i<length;i++) {
++  uint32_t cp=text[i];
++  if(cp>=0xd800 && cp<=0xdbff && i+1<length && text[i+1]>=0xdc00 && text[i+1]<=0xdfff) {
++   cp=0x10000+((cp-0xd800)<<10)+(text[++i]-0xdc00);
++  } else if(cp>=0xd800 && cp<=0xdfff)cp=0xfffd;
++  size_t width=cp<0x80?1:cp<0x800?2:cp<0x10000?3:4;
++  if(position>=capacity || width>=capacity-position)return 0;
++  if(width==1)out[position++]=(char)cp;
++  else {
++   if(width==2)out[position++]=(char)(0xc0|(cp>>6));
++   else if(width==3)out[position++]=(char)(0xe0|(cp>>12));
++   else {out[position++]=(char)(0xf0|(cp>>18));out[position++]=(char)(0x80|((cp>>12)&63));}
++   if(width>=3)out[position++]=(char)(0x80|((cp>>6)&63));
++   out[position++]=(char)(0x80|(cp&63));
++  }
++ }
++ if(position>=capacity)return 0;
++ out[position]=0;*written=position;return 1;
++}
++#endif

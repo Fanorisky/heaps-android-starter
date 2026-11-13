@@ -1,5 +1,6 @@
 #include "platform_state.h"
 #include "utf8_packet.h"
+#include "SDL_heaps_utf16.h"
 #include <cassert>
 #include <cstring>
 #include <thread>
@@ -10,6 +11,27 @@ static void commit(const unsigned char *s, size_t n, const uint32_t *want, size_
  assert(i==count);
 }
 int main() {
+ const uint16_t pasted[]={0x70,0x61,0x73,0x74,0x65,0x64,0x20,0xe9,0x4e2d,0xd83d,0xde00};
+ char encoded[40];size_t encodedLength=0;
+ assert(SDL_HeapsUTF16ToUTF8(pasted,11,encoded,sizeof(encoded),&encodedLength));
+ const unsigned char encodedWant[]={0x70,0x61,0x73,0x74,0x65,0x64,0x20,0xc3,0xa9,0xe4,0xb8,0xad,0xf0,0x9f,0x98,0x80,0};
+ assert(encodedLength==16 && memcmp(encoded,encodedWant,17)==0);
+ const uint32_t ingressWant[]={0x70,0x61,0x73,0x74,0x65,0x64,0x20,0xa9c3,0xadb8e4,0x80989ff0};
+ commit((const unsigned char*)encoded,encodedLength,ingressWant,10);
+ const uint16_t loneSurrogates[]={0xd83d,0x41,0xde00};
+ assert(SDL_HeapsUTF16ToUTF8(loneSurrogates,3,encoded,sizeof(encoded),&encodedLength));
+ const unsigned char loneWant[]={0xef,0xbf,0xbd,0x41,0xef,0xbf,0xbd,0};
+ assert(encodedLength==7 && memcmp(encoded,loneWant,8)==0);
+ assert(!SDL_HeapsUTF16ToUTF8(pasted,11,encoded,4,&encodedLength));
+ heaps_text_buffer pending={};
+ uint64_t beforePoll=pending.generation;
+ heaps_text_cancel(&pending);
+ assert(!heaps_text_install(&pending,"stale",5,17,beforePoll));
+ uint32_t scalar;
+ assert(!heaps_text_pop(&pending,&scalar));
+ assert(heaps_text_install(&pending,"fresh",5,17,pending.generation));
+ assert(heaps_text_pop(&pending,&scalar) && scalar==0x66 && pending.window==17);
+ heaps_text_cancel(&pending);assert(!heaps_text_pop(&pending,&scalar));
  const uint32_t ascii[] = {0x70,0x61,0x73,0x74,0x65,0x64};
  commit((const unsigned char*)"pasted",6,ascii,6);
  const uint32_t mixed[] = {0x41,0xA9C3,0xADB8E4,0x80989FF0,0x5A};

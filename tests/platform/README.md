@@ -1,7 +1,9 @@
 Run `haxe platform-test.hxml` from the repository root for pure lifecycle,
 orientation/haptic normalization and exact 64-bit sensor decoding checks.
 Run `bash tests/platform/run-native.sh` after dependency extraction/patching for
-full ASCII/Unicode/emoji UTF8 commits, malformed/truncated replacements,
+JNI UTF16-to-standard-UTF8 ingress (including pasted text/non-BMP), full
+ASCII/Unicode/emoji UTF8 commits, malformed/truncated replacements,
+cancel-during-poll generation rejection,
 bounded callback queues, sensor registration/background preservation,
 double-buffer coherence during concurrent publication and display-state checks.
 ASan/UBSan are enabled by default; set `SANITIZE=0` on unsupported hosts.

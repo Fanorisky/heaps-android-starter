@@ -27,6 +27,15 @@ class PlatformTest {
   recovered.subscribe(e -> recovery.push(e)); recovered.reconcile(3); recovered.dispatch();
   eq(recovered.foreground, true); eq(recovered.focused, true); eq(recovery.join(","), "0,2");
   recovered.reconcile(3); recovered.dispatch(); eq(recovery.length, 2);
+  var overflow = new LifecycleStore(); var overflowEvents = [];
+  overflow.subscribe(e -> overflowEvents.push(e)); overflow.ingest(0);
+  for(i in 0...1000) overflow.ingest(i % 2 == 0 ? 2 : 3);
+  overflow.reconcile(1); overflow.dispatch();
+  eq(overflowEvents[0], 0); eq(overflowEvents.length, 32);
+  var focusOverflow = new LifecycleStore(); var focusEvents = [];
+  focusOverflow.subscribe(e -> focusEvents.push(e)); focusOverflow.ingest(2);
+  for(i in 0...1000) focusOverflow.ingest(i % 2 == 0 ? 0 : 1);
+  focusOverflow.reconcile(2); focusOverflow.dispatch(); eq(focusEvents[0], 2);
   var b = haxe.io.Bytes.alloc(32);
   b.setDouble(0, 1.5); b.setDouble(8, -2.25); b.setDouble(16, 0.125);
   b.setInt32(24, 0x89ABCDEF); b.setInt32(28, 0x12345678);

@@ -17,7 +17,12 @@ class LifecycleStore {
   if(event < 0 || event > 3) return;
   var value:LifecycleEvent = cast event;
   if(events.length > 0 && events[events.length-1] == value) return;
-  if(events.length == 32) events.shift();
+  if(events.length == 32) {
+   var drop = 0;
+   while(drop < events.length && ((events[drop]:Int) < 2) != (event < 2)) drop++;
+   if(drop == events.length) drop = 0;
+   events.splice(drop, 1);
+  }
   events.push(value);
   switch value {
    case Foreground: foreground = true;
