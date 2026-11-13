@@ -6,7 +6,7 @@ This project compiles **Haxe → HashLink/C → Android native libraries → APK
 
 ## Download an APK
 
-GitHub Actions builds both native ABIs on every push to `main`. Open [Build Android APK](https://github.com/Fanorisky/heaps-android-starter/actions/workflows/android.yml), select a successful run, and download `neon-drift-debug-apk` from Artifacts. Extract the ZIP and install `neon-drift-debug.apk` on an Android24+ device with GLES3. Tagged test builds are also available from [Releases](https://github.com/Fanorisky/heaps-android-starter/releases).
+GitHub Actions builds all three native ABIs on every push to `main`. Open [Build Android APK](https://github.com/Fanorisky/heaps-android-starter/actions/workflows/android.yml), select a successful run, and download `neon-drift-debug-apk` from Artifacts. Extract the ZIP and install `neon-drift-debug.apk` on an Android24+ device with GLES3. Tagged test builds are also available from [Releases](https://github.com/Fanorisky/heaps-android-starter/releases).
 
 ## Build on Linux
 
@@ -33,7 +33,7 @@ export ANDROID_HOME=/path/to/android-sdk
 
 The build script defaults to `/opt/android-sdk` when `ANDROID_HOME` is unset. The first build downloads pinned native source archives and Gradle/Maven dependencies. Once the sources and Gradle dependencies are cached, `./scripts/build-apk.sh --offline` builds without Maven downloads.
 
-Output: **`dist/neon-drift-debug.apk`**, debug-signed for local installation, containing `arm64-v8a` and `x86_64` libraries. This is an Android24+ GLES3 development artifact. Configure your own release signing and complete physical-device testing before distribution as a production release.
+Output: **`dist/neon-drift-debug.apk`**, debug-signed for local installation, containing `armeabi-v7a`, `arm64-v8a` and `x86_64` libraries. This is an Android24+ GLES3 development artifact. Configure your own release signing and complete physical-device testing before distribution as a production release.
 
 ```sh
 "$ANDROID_HOME/platform-tools/adb" install -r dist/neon-drift-debug.apk
@@ -76,6 +76,10 @@ Java loads `SDL2`, then `hl`, then `main`. HashLink's Android `JNI_OnLoad` lives
 
 Best scores use HashLink's `std/sys_special` native to resolve Android's internal files directory. Save data is versioned, bounded and checksummed; writes replace a temporary file atomically. Losing focus pauses the run and clears transient pointer input. Resuming requires an explicit tap.
 
-Seven patches cover Heaps' newer optional GPU readback/timing APIs, Android GLES headers/unsupported desktop-only shader-storage binding, Android stack traces available on API24, modern Haxe SDL entry selection, ARM64 breakpoint instructions, the private-storage JNI signature, vec4 uniform counts, and SDL fullscreen window creation. GPU readback and elapsed-time query features requiring newer hlsdl deliberately report an unsupported-version error; this 2D game does not use them. See `patches/README.md` for the precise changes.
+Eight patches cover Heaps' newer optional GPU readback/timing APIs, Android GLES headers/unsupported desktop-only shader-storage binding, Android stack traces available on API24, modern Haxe SDL entry selection, ARM breakpoint support, the private-storage JNI signature, vec4 uniform counts, and SDL fullscreen window creation. GPU readback and elapsed-time query features requiring newer hlsdl deliberately report an unsupported-version error; this 2D game does not use them. See `patches/README.md` for the precise changes.
 
 Native upstream sources emit some compiler/deprecation warnings. No unresolved application symbols are accepted. Physical ARM64 runtime behavior has not been established by an x86_64 emulator run.
+
+## Galaxy A10 and other 32-bit Android devices
+
+A 64-bit processor can run a 32-bit Android userspace. Those devices need `armeabi-v7a` libraries, which the v0.1.0 APK did not contain. Builds from v0.1.1 include ARM32 as well as ARM64 and x86_64. Use the newest APK from Releases. If installation still fails, `adb install neon-drift-debug.apk` reports the precise installer error; `adb shell getprop ro.product.cpu.abilist` shows the Android app ABIs.

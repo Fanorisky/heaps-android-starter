@@ -14,3 +14,5 @@ Native format and mesh bindings use upstream implementations. HashLink's officia
 6. **Heaps vec4 uniform count.** Shader buffer sizes are vec4 counts (the backing float buffer is size×4). glUniform4fv expects vec4 count. Correct the caller to pass size, avoiding GL_INVALID_OPERATION and blank output when a single-vec4 parameter uniform is used. Native uniform APIs retain their original contract.
 
 7. **Android fullscreen.** Set SDL_WINDOW_FULLSCREEN when creating the Android SDL window, so SDL does not override the fullscreen activity theme with a windowed surface. This gives the game and touch mapping the same full-display viewport.
+
+8. **Android ARM32 debugger trap.** Add the 32-bit Android `SIGTRAP` branch ahead of Linux/x86 assembly. This patch leaves the published ARM64 patch unchanged and uses disjoint context, so existing extractions update safely and setup remains idempotent.
