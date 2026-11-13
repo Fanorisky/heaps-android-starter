@@ -1,0 +1,75 @@
+--- a/heaps/hxd/snd/openal/Driver.hx
++++ b/heaps/hxd/snd/openal/Driver.hx
+@@ -23,26 +23,33 @@
+ 
+ 	public function new() {
+ 		tmpBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
+-		device   = ALC.openDevice(null);
+-		context  = ALC.createContext(device, null);
+-
+-		ALC.makeContextCurrent(context);
+-		ALC.loadExtensions(device);
+-		AL.loadExtensions();
+-
+-		// query maximum number of auxiliary sends
+-		var bytes = getTmpBytes(4);
+-		ALC.getIntegerv(device, EFX.MAX_AUXILIARY_SENDS, 1, bytes);
+-		maxAuxiliarySends = bytes.getInt32(0);
+-
+-		canReopenDevice = false;
+-		#if (hl && hlopenal >= version("1.16.0"))
+-		if( hl.Api.isPrimLoaded(openal.ExtALC.reopenDeviceSoft) && ALC.isExtensionPresent(null, @:privateAccess openal.ExtALC.SOFT_reopen_device.toUtf8()) )
+-			canReopenDevice = true;
+-		#end
+-
+-		if (AL.getError() != AL.NO_ERROR)
+-			throw "could not init openAL Driver";
++		try {
++			device   = ALC.openDevice(null);
++			if (device == null) throw "could not open openAL device";
++			context  = ALC.createContext(device, null);
++			if (context == null) throw "could not create openAL context";
++
++			if (!ALC.makeContextCurrent(context)) throw "could not activate openAL context";
++			ALC.loadExtensions(device);
++			AL.loadExtensions();
++
++			// query maximum number of auxiliary sends
++			var bytes = getTmpBytes(4);
++			ALC.getIntegerv(device, EFX.MAX_AUXILIARY_SENDS, 1, bytes);
++			maxAuxiliarySends = bytes.getInt32(0);
++
++			canReopenDevice = false;
++			#if (hl && hlopenal >= version("1.16.0"))
++			if( hl.Api.isPrimLoaded(openal.ExtALC.reopenDeviceSoft) && ALC.isExtensionPresent(null, @:privateAccess openal.ExtALC.SOFT_reopen_device.toUtf8()) )
++				canReopenDevice = true;
++			#end
++
++			if (AL.getError() != AL.NO_ERROR)
++				throw "could not init openAL Driver";
++		} catch (error : Dynamic) {
++			dispose();
++			throw error;
++		}
+ 	}
+ 
+ 	public function hasFeature( f : DriverFeature ) {
+@@ -205,9 +212,15 @@
+ 	}
+ 
+ 	public function dispose() : Void {
+-		ALC.makeContextCurrent(null);
+-		ALC.destroyContext(context);
+-		ALC.closeDevice(device);
++		if (context != null) {
++			if (ALC.getCurrentContext() == context) ALC.makeContextCurrent(null);
++			ALC.destroyContext(context);
++			context = null;
++		}
++		if (device != null) {
++			ALC.closeDevice(device);
++			device = null;
++		}
+ 	}
+ 
+ 	public function getEffectDriver(type : String) : hxd.snd.Driver.EffectDriver<Dynamic> {

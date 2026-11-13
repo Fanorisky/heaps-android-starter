@@ -1,0 +1,21 @@
+--- a/hashlink/libs/openal/openal.c
++++ b/hashlink/libs/openal/openal.c
+@@ -1,5 +1,8 @@
+ #define HL_NAME(n) openal_##n
+ #include <hl.h>
++#ifdef HEAPS_ANDROID_AUDIO_GATE
++#include "audio_gate.h"
++#endif
+ #undef _GUID
+ 
+ #if defined(__APPLE__) && !defined(openal_soft)
+@@ -56,6 +59,9 @@
+ }
+ 
+ HL_PRIM bool HL_NAME(alc_close_device)(ALCdevice *device) {
++#ifdef HEAPS_ANDROID_AUDIO_GATE
++	audio_unregister_device(device);
++#endif
+ 	return alcCloseDevice(device) == ALC_TRUE;
+ }
+ 
