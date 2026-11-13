@@ -24,4 +24,4 @@ Suspend must pause without a time jump; letterboxing preserves touch bounds; res
 `./scripts/run-tests.sh`, `./scripts/build-apk.sh`, `./scripts/verify-emulator.sh`, APK signature/native symbol inspection, `git status --short`.
 
 ## Authorized follow-up
-- [ ] Publish public GitHub repository in Fanorisky account and execute the Android APK Actions build, as explicitly requested during implementation. Deliver the CI-built APK for physical-device testing.
+- [x] Publish public GitHub repository in Fanorisky account and execute the Android APK Actions build, as explicitly requested during implementation. Deliver the CI-built APK for physical-device testing.

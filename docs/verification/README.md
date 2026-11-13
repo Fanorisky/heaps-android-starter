@@ -20,3 +20,11 @@ Local verified APK SHA-256: `8ac2d8b9cf14e786cb74c11bdc8b45478c9ac6b65472574b1ec
 The emulator run exercised a loss result; the model suite covers the win transition. Physical ARM64 runtime testing remains for an Android device. The APK is debug-signed. Upstream native sources emit compiler/deprecation warnings; builds reject unresolved application symbols.
 
 GitHub Actions separately builds the same pinned source stack and verifies signatures/ABIs. CI artifact signatures and hashes can differ from this locally built APK.
+
+## GitHub Actions artifact
+
+[Run 43474697561](https://github.com/Fanorisky/heaps-android-starter/actions/runs/43474697561) completed successfully for commit `0525912`:62 assertions, both ABI builds, signature/entry checks and artifact upload passed.
+
+The downloaded CI APK was checksum-verified and separately installed/tested on the emulator. The complete title/rendering, touch, pause/background, results/restart and persistence gate passed again. See `ci-emulator-report.json`.
+
+CI APK SHA-256: `b02c0633714397ffb30af329b7cbf1c997888a1b519c2e69d302f70b90b1ae31`.

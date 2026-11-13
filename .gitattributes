@@ -1,2 +1,5 @@
 # Patch hunks preserve upstream tabs/CRLF and diff context prefixes byte-for-byte.
 *.patch -text -whitespace
+
+# Preserve third-party license copies as supplied by their authors.
+third_party/licenses/** -text -whitespace

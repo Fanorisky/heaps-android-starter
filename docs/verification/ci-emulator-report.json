@@ -1,0 +1,52 @@
+{
+  "visible_title_pixels": 31504,
+  "title": {
+    "phase": "title",
+    "score": "0",
+    "best": "0",
+    "remaining": "45"
+  },
+  "manual_pause": {
+    "phase": "paused",
+    "score": "42",
+    "best": "0",
+    "remaining": "41"
+  },
+  "result": {
+    "phase": "lost",
+    "score": "258",
+    "best": "258",
+    "remaining": "22"
+  },
+  "restart": {
+    "phase": "playing",
+    "score": "0",
+    "best": "258",
+    "remaining": "45"
+  },
+  "automatic_pause": {
+    "phase": "paused",
+    "score": "24",
+    "best": "258",
+    "remaining": "43"
+  },
+  "manual_resume": {
+    "phase": "playing",
+    "score": "42",
+    "best": "0",
+    "remaining": "41"
+  },
+  "automatic_resume": {
+    "phase": "playing",
+    "score": "24",
+    "best": "258",
+    "remaining": "43"
+  },
+  "reloaded": {
+    "phase": "title",
+    "score": "0",
+    "best": "258",
+    "remaining": "45"
+  },
+  "device": "x86_64"
+}
