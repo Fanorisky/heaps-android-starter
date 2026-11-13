@@ -1,0 +1,82 @@
+--- a/heaps/hxd/snd/Manager.hx
++++ b/heaps/hxd/snd/Manager.hx
+@@ -100,36 +100,50 @@
+ 
+ 	private function new() {
+ 		try {
+-			#if usesys
+-			driver = new haxe.AudioTypes.SoundDriver();
+-			#elseif (js && !useal)
+-			driver = new hxd.snd.webaudio.Driver();
+-			#else
+-			driver = new hxd.snd.openal.Driver();
+-			#end
+-		} catch(e : String) {
++			try {
++				#if usesys
++				driver = new haxe.AudioTypes.SoundDriver();
++				#elseif (js && !useal)
++				driver = new hxd.snd.webaudio.Driver();
++				#else
++				driver = new hxd.snd.openal.Driver();
++				#end
++			} catch(e : String) {
++				driver = null;
++			}
++
++			masterVolume       = 1.0;
++			hasMasterVolume    = driver == null ? true : driver.hasFeature(MasterVolume);
++			masterSoundGroup   = new SoundGroup  ("master");
++			masterChannelGroup = new ChannelGroup("master");
++			listener           = new Listener();
++			soundBufferMap     = new Map();
++			soundBufferKeys	   = [];
++			freeStreamBuffers  = [];
++			effectGC           = [];
++			soundBufferCount   = 0;
++
++			if (driver != null) {
++				// alloc sources
++				sources = [];
++				for (i in 0...MAX_SOURCES) sources.push(new Source(driver));
++			}
++
++			cachedBytes   = haxe.io.Bytes.alloc(4 * 3 * 2);
++			resampleBytes = haxe.io.Bytes.alloc(STREAM_BUFFER_SAMPLE_COUNT * 2);
++		} catch (error : Dynamic) {
++			// instance is not assigned yet: Source.dispose()/Manager.dispose()
++			// would recurse through Manager.get(). Release handles directly.
++			if (driver != null) {
++				if (sources != null) for (source in sources) {
++					try { driver.destroySource(source.handle); } catch (cleanupError : Dynamic) {}
++				}
++				try { driver.dispose(); } catch (cleanupError : Dynamic) {}
++			}
+ 			driver = null;
+-		}
+-
+-		masterVolume       = 1.0;
+-		hasMasterVolume    = driver == null ? true : driver.hasFeature(MasterVolume);
+-		masterSoundGroup   = new SoundGroup  ("master");
+-		masterChannelGroup = new ChannelGroup("master");
+-		listener           = new Listener();
+-		soundBufferMap     = new Map();
+-		soundBufferKeys	   = [];
+-		freeStreamBuffers  = [];
+-		effectGC           = [];
+-		soundBufferCount   = 0;
+-
+-		if (driver != null) {
+-			// alloc sources
+-			sources = [];
+-			for (i in 0...MAX_SOURCES) sources.push(new Source(driver));
+-		}
+-
+-		cachedBytes   = haxe.io.Bytes.alloc(4 * 3 * 2);
+-		resampleBytes = haxe.io.Bytes.alloc(STREAM_BUFFER_SAMPLE_COUNT * 2);
++			sources = null;
++			throw error;
++		}
+ 	}
+ 
+ 	function getTmpBytes(size) {

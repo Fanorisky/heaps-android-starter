@@ -29,10 +29,33 @@ class AudioRegression {
         isRunning = true; virtualCase = false;
         try {
             if (!Audio.init()) { finish(false, "OpenAL device unavailable"); return; }
+            if (!checkPartialConstruction()) { finish(false, "Failed Manager construction leaked OpenAL resources"); return; }
             if (!checkSfxVolumes()) { finish(false, "SFX bus did not update live/future channels"); return; }
             Audio.musicVolume = 0.5; Audio.musicMuted = false;
             begin();
         } catch (error:Dynamic) { finish(false, Std.string(error)); }
+    }
+    static function checkPartialConstruction():Bool {
+        Audio.shutdown();
+        var previousLimit = hxd.snd.Manager.MAX_SOURCES;
+        // The pinned OpenAL device defaults to a 256-source cap. Exceed it
+        // using real Source allocations, before Manager.get assigns instance.
+        hxd.snd.Manager.MAX_SOURCES = 4096;
+        var allocationError:Dynamic = null;
+        try {
+            // Calling get directly also proves the constructor preserves its
+            // original allocation error instead of a secondary cleanup error.
+            var unexpectedManager = hxd.snd.Manager.get();
+            unexpectedManager.dispose();
+        }
+        catch (error:Dynamic) {
+            allocationError = error;
+        }
+        hxd.snd.Manager.MAX_SOURCES = previousLimit;
+        if (allocationError != "could not create source") return false;
+        if ((@:privateAccess hxd.snd.Manager.instance) != null
+            || openal.ALC.getCurrentContext() != null || Audio.state != Unavailable) return false;
+        return Audio.init();
     }
     static function begin():Void {
         var previous = channel;
