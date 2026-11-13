@@ -9,7 +9,7 @@ public:
     struct Operations {
         bool (*prepare)(void *);
         void (*pause)(void *);
-        void (*resume)(void *);
+        bool (*resume)(void *);
     };
     explicit AudioGateController(Operations operations);
     int registerDevice(void *device);

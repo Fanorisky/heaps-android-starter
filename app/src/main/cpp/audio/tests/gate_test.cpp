@@ -14,15 +14,17 @@ struct Device {
     int pauses = 0;
     int resumes = 0;
     bool supported = true;
+    bool resumeSucceeds = true;
 };
 static bool prepare(void *p) { return static_cast<Device *>(p)->supported; }
 static void pauseDevice(void *p) {
     auto &d = *static_cast<Device *>(p);
     assert(d.alive); d.running = false; ++d.pauses;
 }
-static void resumeDevice(void *p) {
+static bool resumeDevice(void *p) {
     auto &d = *static_cast<Device *>(p);
     assert(d.alive); d.running = true; ++d.resumes;
+    return d.resumeSucceeds;
 }
 static AudioGateController::Operations ops = {prepare, pauseDevice, resumeDevice};
 static void grant(AudioGateController &gate, int generation) {
@@ -108,11 +110,25 @@ static void lossRequiresExplicitResume() {
 static std::mutex blockMutex;
 static std::condition_variable blockCondition;
 static bool entered = false, releaseResume = false;
-static void blockingResume(void *p) {
+static bool blockingResume(void *p) {
     std::unique_lock<std::mutex> lock(blockMutex);
     entered = true; blockCondition.notify_all();
     blockCondition.wait(lock, [] { return releaseResume; });
-    resumeDevice(p);
+    return resumeDevice(p);
+}
+static void failedResumeStaysPausedAndClearsIntent() {
+    AudioGateController gate(ops);
+    Device a;
+    a.resumeSucceeds = false;
+    gate.setForeground(true); gate.registerDevice(&a);
+    grant(gate, 1);
+    assert(gate.state() == 1 && !a.running);
+    assert(a.resumes == 1 && a.pauses == 2); // rollback even a partial start
+    a.resumeSucceeds = true;
+    gate.setForeground(true); gate.setFocus(1, true);
+    assert(gate.state() == 1 && !a.running && a.resumes == 1);
+    gate.setIntent(true); // only a fresh explicit request may retry
+    assert(gate.state() == 2 && a.running && a.resumes == 2);
 }
 static void unregisterWaitsForDeviceOperation() {
     AudioGateController gate({prepare, pauseDevice, blockingResume});
@@ -141,6 +157,7 @@ static void unregisterWaitsForDeviceOperation() {
     assert(gate.state() == 0);
 }
 int main() {
-    registration(); lossRequiresExplicitResume(); unregisterWaitsForDeviceOperation();
+    registration(); lossRequiresExplicitResume(); failedResumeStaysPausedAndClearsIntent();
+    unregisterWaitsForDeviceOperation();
     std::cout << "AUDIO_GATE_TEST_PASS\n";
 }

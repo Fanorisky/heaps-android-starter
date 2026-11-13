@@ -20,7 +20,19 @@ bool prepareDevice(void *value) {
     return true;
 }
 void pauseDevice(void *value) { pauseFunction(static_cast<ALCdevice *>(value)); }
-void resumeDevice(void *value) { resumeFunction(static_cast<ALCdevice *>(value)); }
+bool resumeDevice(void *value) {
+    auto *device = static_cast<ALCdevice *>(value);
+    // Report this operation's result, not an older unrelated ALC error.
+    alcGetError(device);
+    resumeFunction(device);
+    if (alcGetError(device) != ALC_NO_ERROR) return false;
+    if (alcIsExtensionPresent(device, "ALC_EXT_disconnect")) {
+        ALCint connected = ALC_FALSE;
+        alcGetIntegerv(device, ALC_CONNECTED, 1, &connected);
+        if (alcGetError(device) != ALC_NO_ERROR || connected != ALC_TRUE) return false;
+    }
+    return true;
+}
 AudioGateController gate({prepareDevice, pauseDevice, resumeDevice});
 }
 

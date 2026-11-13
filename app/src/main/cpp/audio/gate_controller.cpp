@@ -29,8 +29,15 @@ void AudioGateController::unregisterLocked() {
 void AudioGateController::reconcile() {
     bool next = device && foreground && focused && intent;
     if (device && next != running) {
-        if (next) operations.resume(device);
-        else operations.pause(device);
+        if (next) {
+            if (!operations.resume(device)) {
+                // Backends may partially start before reporting an error.
+                // Restore pause and require fresh intent before retrying.
+                operations.pause(device);
+                intent = false;
+                next = false;
+            }
+        } else operations.pause(device);
     }
     running = next;
 }
