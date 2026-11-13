@@ -1,0 +1,84 @@
+{
+  "application": {
+    "package": "io.heaps.android.proof",
+    "versionCode": 2,
+    "versionName": "0.2.0",
+    "activity": "io.heaps.android.HeapsActivity",
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ],
+    "minSdk": 24,
+    "label": "Heaps Android Proof"
+  },
+  "certificateSha256": "955cd26e9de2c1da3cde91b282886d12dc70c39b41172d2c74045568ea5a38d2",
+  "libraries": {
+    "armeabi-v7a": {
+      "libmain.so": {
+        "bytes": 4508356,
+        "machine": "ARM"
+      },
+      "libhl.so": {
+        "bytes": 453908,
+        "machine": "ARM"
+      },
+      "libSDL2.so": {
+        "bytes": 888384,
+        "machine": "ARM"
+      },
+      "libopenal.so": {
+        "bytes": 890064,
+        "machine": "ARM"
+      },
+      "libc++_shared.so": {
+        "bytes": 850380,
+        "machine": "ARM"
+      }
+    },
+    "arm64-v8a": {
+      "libmain.so": {
+        "bytes": 6901648,
+        "machine": "AArch64"
+      },
+      "libhl.so": {
+        "bytes": 614360,
+        "machine": "AArch64"
+      },
+      "libSDL2.so": {
+        "bytes": 1229936,
+        "machine": "AArch64"
+      },
+      "libopenal.so": {
+        "bytes": 1219712,
+        "machine": "AArch64"
+      },
+      "libc++_shared.so": {
+        "bytes": 1253544,
+        "machine": "AArch64"
+      }
+    },
+    "x86_64": {
+      "libmain.so": {
+        "bytes": 7218584,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libhl.so": {
+        "bytes": 648160,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libSDL2.so": {
+        "bytes": 1363640,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libopenal.so": {
+        "bytes": 1303304,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libc++_shared.so": {
+        "bytes": 1229808,
+        "machine": "Advanced Micro Devices X86-64"
+      }
+    }
+  }
+}

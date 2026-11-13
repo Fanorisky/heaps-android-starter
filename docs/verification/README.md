@@ -28,3 +28,7 @@ GitHub Actions separately builds the same pinned source stack and verifies signa
 The downloaded CI APK was checksum-verified and separately installed/tested on the emulator. The complete title/rendering, touch, pause/background, results/restart and persistence gate passed again. See `ci-emulator-report.json`.
 
 CI APK SHA-256: `b02c0633714397ffb30af329b7cbf1c997888a1b519c2e69d302f70b90b1ae31`.
+
+## Reusable SDK milestone
+
+Current host/audio/platform evidence is in [sdk-v0.2.0](sdk-v0.2.0/README.md). The earlier sections describe the initial Neon Drift-only proof.
