@@ -1,7 +1,8 @@
-name: Build Android APK
+name: Build Heaps Android Proof
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -30,17 +31,50 @@ jobs:
           path: vendor/.cache
           key: native-sources-${{ runner.os }}-${{ hashFiles('third_party/dependencies.lock.json') }}
       - uses: gradle/actions/setup-gradle@v4
-      - name: Test and build native APK for ARM32, ARM64 and x86_64
-        run: ./scripts/build-apk.sh
-      - name: Verify APK signature and native entry points
-        run: python3 scripts/verify-apk.py
+      - name: Prepare private stable test identity
+        if: github.event_name != 'pull_request'
+        env:
+          HEAPS_ANDROID_TEST_KEYSTORE: ${{ secrets.HEAPS_ANDROID_TEST_KEYSTORE }}
+          HEAPS_ANDROID_TEST_STORE_PASSWORD: ${{ secrets.HEAPS_ANDROID_TEST_STORE_PASSWORD }}
+          HEAPS_ANDROID_TEST_KEY_PASSWORD: ${{ secrets.HEAPS_ANDROID_TEST_KEY_PASSWORD }}
+          HEAPS_ANDROID_TEST_KEY_ALIAS: ${{ secrets.HEAPS_ANDROID_TEST_KEY_ALIAS }}
+        run: |
+          python3 - <<'PY'
+          import os, base64
+          from pathlib import Path
+          names = ['HEAPS_ANDROID_TEST_KEYSTORE','HEAPS_ANDROID_TEST_STORE_PASSWORD','HEAPS_ANDROID_TEST_KEY_PASSWORD','HEAPS_ANDROID_TEST_KEY_ALIAS']
+          if any(not os.environ.get(name) for name in names):
+              raise SystemExit('Required stable test-signing secrets are missing')
+          folder = Path(os.environ['RUNNER_TEMP']) / 'heapsandroid-signing'
+          folder.mkdir(mode=0o700)
+          key = folder / 'test.keystore'
+          key.write_bytes(base64.b64decode(os.environ[names[0]], validate=True))
+          key.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write('HEAPS_ANDROID_TEST_KEYSTORE_PATH=' + str(key) + '\n')
+          PY
+      - name: Test and build stable proof APK
+        if: github.event_name != 'pull_request'
+        env:
+          HEAPS_ANDROID_TEST_STORE_PASSWORD: ${{ secrets.HEAPS_ANDROID_TEST_STORE_PASSWORD }}
+          HEAPS_ANDROID_TEST_KEY_PASSWORD: ${{ secrets.HEAPS_ANDROID_TEST_KEY_PASSWORD }}
+          HEAPS_ANDROID_TEST_KEY_ALIAS: ${{ secrets.HEAPS_ANDROID_TEST_KEY_ALIAS }}
+        run: ./scripts/build-apk.sh --variant=proof
+      - name: Test and build ephemeral PR APK
+        if: github.event_name == 'pull_request'
+        run: ./scripts/build-apk.sh --variant=debug
       - uses: actions/upload-artifact@v4
         with:
-          name: neon-drift-debug-apk
+          name: ${{ github.event_name == 'pull_request' && 'heaps-android-debug-ephemeral' || 'heaps-android-proof' }}
           path: |
-            dist/neon-drift-debug.apk
-            dist/neon-drift-debug.apk.sha256
+            dist/heaps-android-proof.apk
+            dist/heaps-android-proof.apk.sha256
             dist/verification/apk.json
             dist/verification/signature.txt
+            third_party/licenses/openal/
+            third_party/dependencies.lock.json
           if-no-files-found: error
           retention-days: 30
+      - name: Remove decoded private identity
+        if: always() && github.event_name != 'pull_request'
+        run: rm -rf "$RUNNER_TEMP/heapsandroid-signing"

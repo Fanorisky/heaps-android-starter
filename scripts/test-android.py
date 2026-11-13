@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Exercise the developer proof APK using its actual Android metadata."""
+from pathlib import Path
+import argparse
+import json
+import os
+import re
+import subprocess
+import time
+from apk_info import apk_info
+
+ROOT=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser()
+parser.add_argument('apk',nargs='?',default=str(ROOT/'dist/heaps-android-proof.apk'))
+parser.add_argument('serial',nargs='?',default=os.environ.get('ANDROID_SERIAL'))
+parser.add_argument('--audio-only',action='store_true')
+args=parser.parse_args();info=apk_info(args.apk);package=info['package']
+ADB=[str(Path(os.environ.get('ANDROID_HOME','/opt/android-sdk'))/'platform-tools/adb')]
+if args.serial:ADB+=['-s',args.serial]
+OUT=ROOT/'dist/verification';OUT.mkdir(parents=True,exist_ok=True)
+controls=json.loads((ROOT/'tests/demo/features-controls.json').read_text())['centers']
+def adb(*arguments,binary=False):return subprocess.check_output(ADB+list(arguments),text=not binary,timeout=30)
+def logs():return adb('logcat','-d','-v','brief','hl:D','AndroidRuntime:E','libc:F','*:S')
+def wait_for(pattern,seconds=20):
+ end=time.monotonic()+seconds
+ while time.monotonic()<end:
+  value=logs()
+  if 'Fatal signal' in value or 'FATAL EXCEPTION' in value or 'engine error:' in value:raise AssertionError(value)
+  found=re.search(pattern,value)
+  if found:return found.group(0)
+  time.sleep(.3)
+ raise AssertionError('Missing log: '+pattern+'\n'+logs())
+def capture(name):
+ (OUT/(name+'.png')).write_bytes(adb('exec-out','screencap','-p',binary=True))
+def launch():return adb('shell','am','start','-n',package+'/'+info['activity'])
+def tap(name):
+ x,y=controls[name]
+ width,height=map(int,re.findall(r'(\d+)x(\d+)',adb('shell','wm','size'))[-1])
+ scale=min(width/360,height/640)
+ adb('shell','input','tap',str(round((width-360*scale)/2+x*scale)),str(round((height-640*scale)/2+y*scale)))
+try:
+ adb('wait-for-device');adb('install','-r',str(Path(args.apk).resolve()))
+ adb('shell','am','force-stop',package);adb('logcat','-c')
+ adb('shell','input','keyevent','KEYCODE_WAKEUP');launch()
+ wait_for(r'Neon Drift: phase=title');time.sleep(1);capture('sdk-title')
+ tap('titleFeatures');time.sleep(.5);capture('sdk-features')
+ tap('audioChecks')
+ result=wait_for(r'AUDIO_TEST_(?:PASS|FAIL)[^\n]+',seconds=30)
+ assert result.startswith('AUDIO_TEST_PASS'),result
+ capture('sdk-audio-checks')
+ if not args.audio_only:
+  tap('musicPlay');wait_for('Looping music requested');time.sleep(.7)
+  (OUT/'audioflinger-running.txt').write_text(adb('shell','dumpsys','media.audio_flinger'))
+  tap('keyboardShow');time.sleep(.7)
+  adb('shell','input','text','Heaps%sSDK');time.sleep(.7)
+  tap('keyboardHide');time.sleep(.5)
+  prefs=adb('shell','run-as',package,'cat','files/heaps-android-settings.json')
+  parsed=json.loads(prefs);assert 'Heaps SDK' in prefs,parsed
+  tap('accelerometerToggle');tap('gyroscopeToggle');tap('hapticsVibrate');time.sleep(.5)
+  capture('sdk-platform')
+  adb('shell','input','keyevent','KEYCODE_HOME');time.sleep(2)
+  (OUT/'audioflinger-background.txt').write_text(adb('shell','dumpsys','media.audio_flinger'))
+  launch();time.sleep(1);capture('sdk-returned-paused')
+  tap('audioResume');wait_for('Audio resumed');time.sleep(.5)
+  tap('featuresBack');time.sleep(.3)
+  # Normal game entry/exit proves platform integration retains the sample loop.
+  width,height=map(int,re.findall(r'(\d+)x(\d+)',adb('shell','wm','size'))[-1]);scale=min(width/360,height/640)
+  adb('shell','input','tap',str(round(width/2)),str(round((height-640*scale)/2+477*scale)))
+  wait_for('phase=playing');time.sleep(1);capture('sdk-gameplay')
+  adb('shell','am','force-stop',package);adb('logcat','-c');launch();wait_for('phase=title')
+  assert adb('shell','run-as',package,'cat','files/heaps-android-settings.json')==prefs,'Preferences changed after process restart'
+ log=logs();assert 'Fatal signal' not in log and 'FATAL EXCEPTION' not in log,log
+ (OUT/'sdk-logcat.txt').write_text(log)
+ (OUT/'sdk-report.json').write_text(json.dumps({'application':info,'audioChecks':result,'audioOnly':args.audio_only,'hardwareAbi':adb('shell','getprop','ro.product.cpu.abi').strip()},indent=2)+'\n')
+ print('PASS Android proof: '+result)
+except Exception:
+ (OUT/'sdk-failure-logcat.txt').write_text(logs());capture('sdk-failure');raise

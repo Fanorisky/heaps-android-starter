@@ -68,7 +68,7 @@ file(GLOB HL_STD CONFIGURE_DEPENDS "${HL}/src/std/*.c")
 add_library(hl SHARED "${HL}/src/gc.c" ${HL_STD} ${PCRE_SOURCES})
 target_include_directories(hl PUBLIC "${HL}/src" PRIVATE "${HL}/include/pcre")
 target_compile_definitions(hl PRIVATE LIBHL_EXPORTS HAVE_CONFIG_H PCRE2_CODE_UNIT_WIDTH=16
-    HL_ANDROID_ACTIVITY="io/heaps/neondrift/GameActivity")
+    HL_ANDROID_ACTIVITY="io/heaps/android/HeapsActivity")
 target_link_libraries(hl PRIVATE m dl log)
 
 # Haxe's generated game.c includes hlc_main.c, which supplies SDL_main on mobile.
@@ -93,3 +93,9 @@ target_compile_definitions(main PRIVATE LIBHL_STATIC HL_SDL)
 target_link_libraries(main PRIVATE hl SDL2 png_static zlibstatic turbojpeg-static vorbisfile vorbisenc vorbis GLESv3 EGL log m dl)
 target_link_options(main PRIVATE "-Wl,--no-undefined" "-Wl,-z,max-page-size=16384")
 target_link_options(hl PRIVATE "-Wl,-z,max-page-size=16384")
+
+# Reusable Android platform/audio fragments expose object libraries.
+add_subdirectory(platform)
+add_subdirectory(audio)
+target_sources(main PRIVATE $<TARGET_OBJECTS:heapsandroid_platform> $<TARGET_OBJECTS:heapsandroid_audio>)
+target_link_libraries(main PRIVATE OpenAL)

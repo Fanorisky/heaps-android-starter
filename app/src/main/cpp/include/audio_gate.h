@@ -11,6 +11,8 @@ extern "C" {
 #endif
 int audio_register(void *device);
 void audio_unregister(void);
+/* Native close wrappers clear only this device before destroying it. */
+void audio_unregister_device(void *device);
 void audio_set_foreground(int foreground);
 void audio_begin_focus_request(int generation);
 void audio_set_focus(int generation, int focused);

@@ -1,9 +1,15 @@
-# Pinned dependencies
+# Pinned native dependencies
 
-`dependencies.lock.json` pins upstream archive URLs, revisions and SHA-256 hashes. `scripts/setup-toolchain.sh` verifies each cached/downloaded archive before extracting it under ignored `vendor/`. Haxelib mappings are local to this repository.
+`dependencies.lock.json` records exact archive URLs, revisions and SHA256 hashes. Setup verifies cached/downloaded archives before extracting ignored `vendor/` sources and applies the explicit patches idempotently. Haxelib mappings are local to the template.
 
-HashLink 1.15 uses SDL2; its native SDL and format bindings are compiled with the generated game C. Format decoding uses pinned PNG, zlib, TurboJPEG, Ogg and Vorbis libraries. No OpenAL library is linked. This small game currently uses no audio assets. HashLink's official `ui_stub.c` provides its non-Windows desktop-dialog/sentinel fallback; game screens are Heaps scenes. We do not replace rendering, input, storage or gameplay natives with dummy implementations.
+HashLink1.15 supplies native SDL and format bindings. The SDK also builds its `hlopenal` binding against OpenAL Soft1.24.3. OpenAL's OpenSL ES output is a real Android backend and `libopenal.so` is packaged separately. Extension import-pointer globals in the HL binding are hidden, avoiding interposition of OpenAL functions.
 
-License copies are in `licenses/`. The format library's BSD license is copied from its source header. HashLink additionally bundles PCRE2, minimp3 and MikkTSpace (license included in its source header). SDL includes third-party components under its own source tree; consult their original headers/licenses when redistributing modified components. Gradle wrapper is Apache-2.0 software from the Gradle project.
+OpenAL Soft is LGPL; copies of its license and bundled-code notices are in `licenses/openal/`. Its exact corresponding source is the `openal` archive in the lock file:
 
-Any changes to upstream sources are recorded under `patches/` and applied idempotently by setup.
+https://codeload.github.com/kcat/openal-soft/tar.gz/dc7d7054a5b4f3bec1dc23a42fd616a0847af948
+
+Our build options are in `app/src/main/cpp/audio/CMakeLists.txt`. OpenAL source is unmodified. The public template plus pinned archives allows rebuilding/replacing the separate shared library. Keep these notices/source information with distributed binaries.
+
+PNG/zlib/TurboJPEG/Ogg/Vorbis supply real image/audio format decoding. HashLink's retained native mesh utilities are built from their upstream sources. HashLink's official non-Windows `ui_stub.c` covers desktop dialog/sentinel references; game and proof screens are rendered in Heaps.
+
+Other dependency license copies are under `licenses/`. Original generated example asset authorship/license information is in `assets/LICENSE.txt`. Template code is MIT; dependencies retain their respective licenses.

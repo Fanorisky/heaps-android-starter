@@ -1,20 +1,57 @@
 plugins { id 'com.android.application' }
 
+def setting = { String key, String fallback -> project.hasProperty(key) ? project.property(key).toString() : fallback }
+def appId = setting('app.application_id', 'io.heaps.android.proof')
+def appName = setting('app.name', 'Heaps Android Proof')
+def appVersion = setting('app.version_name', '0.2.0')
+def versionNumber = setting('app.version_code', '2')
+def orientation = setting('app.orientation', 'portrait')
+def booleanSetting = { String key, String fallback ->
+    def value = setting(key, fallback)
+    if (!(value in ['true', 'false'])) throw new GradleException("${key} must be true or false")
+    value
+}
+if (!(appId ==~ /[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+/)) throw new GradleException('Invalid app.application_id')
+if (appName.trim().isEmpty() || appVersion.trim().isEmpty()) throw new GradleException('App name/version must be nonempty')
+if (!(versionNumber ==~ /[0-9]+/) || versionNumber.toLong() < 1 || versionNumber.toLong() > 2100000000L) throw new GradleException('Invalid app.version_code')
+if (!(orientation in ['portrait', 'landscape', 'unspecified'])) throw new GradleException('Invalid app.orientation')
+def orientationManifest = [portrait:'sensorPortrait', landscape:'sensorLandscape', unspecified:'unspecified'][orientation]
+def keepAwake = booleanSetting('app.keep_awake', 'true')
+def immersive = booleanSetting('app.immersive', 'true')
+def javaString = { String value -> '"' + value.replace('\\','\\\\').replace('"','\\"').replace('\n','\\n').replace('\r','\\r') + '"' }
+
+def signPath = System.getenv('HEAPS_ANDROID_TEST_KEYSTORE_PATH') ?: "${rootDir}/signing/test.keystore"
+def signProps = new Properties()
+def localSignProps = file("${rootDir}/signing/test.properties")
+if (localSignProps.exists()) localSignProps.withInputStream { signProps.load(it) }
+def signStorePassword = System.getenv('HEAPS_ANDROID_TEST_STORE_PASSWORD') ?: signProps.getProperty('storePassword')
+def signKeyPassword = System.getenv('HEAPS_ANDROID_TEST_KEY_PASSWORD') ?: signProps.getProperty('keyPassword')
+def signAlias = System.getenv('HEAPS_ANDROID_TEST_KEY_ALIAS') ?: signProps.getProperty('keyAlias')
+def stableSigningReady = file(signPath).exists() && signStorePassword && signKeyPassword && signAlias
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('proof') } && !stableSigningReady) {
+    throw new GradleException('Stable test signing inputs missing. Run scripts/setup-test-signing.py locally or configure the approved HEAPS_ANDROID_TEST_* CI secrets.')
+}
+
 android {
-    namespace 'io.heaps.neondrift'
+    namespace 'io.heaps.android'
     compileSdk 35
     ndkVersion '28.2.13676358'
     defaultConfig {
-        applicationId 'io.heaps.neondrift'
+        applicationId appId
         minSdk 24
         targetSdk 35
-        versionCode 2
-        versionName '1.0.1'
+        versionCode versionNumber.toInteger()
+        versionName appVersion
+        resValue 'string', 'app_name', appName
+        buildConfigField 'String', 'APP_ORIENTATION', javaString(orientation)
+        buildConfigField 'boolean', 'DISPLAY_IMMERSIVE', immersive
+        buildConfigField 'boolean', 'DISPLAY_KEEP_AWAKE', keepAwake
+        manifestPlaceholders = [APP_ORIENTATION: orientationManifest]
         ndk { abiFilters.addAll((project.findProperty('androidAbis') ?: 'armeabi-v7a,arm64-v8a,x86_64').split(',').toList()) }
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_shared', '-DCMAKE_JOB_POOLS=compile=2', '-DCMAKE_JOB_POOL_COMPILE=compile'
-                targets 'main', 'hl', 'SDL2'
+                targets 'main', 'hl', 'SDL2', 'OpenAL'
                 cFlags '-O2'
                 cppFlags '-O2'
             }
@@ -22,9 +59,27 @@ android {
     }
     sourceSets.main.java.srcDirs += ["${rootDir}/vendor/sdl/android-project/app/src/main/java"]
     externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.30.3' } }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        stableTest {
+            if (stableSigningReady) {
+                storeFile file(signPath)
+                storePassword signStorePassword
+                keyAlias signAlias
+                keyPassword signKeyPassword
+            }
+        }
+    }
     buildTypes {
         debug { debuggable true }
         release { minifyEnabled false }
+        proof {
+            initWith debug
+            signingConfig signingConfigs.stableTest
+            matchingFallbacks = ['debug']
+            debuggable true
+            minifyEnabled false
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -35,7 +90,7 @@ android {
 def generateHlc = tasks.register('generateHlc', Exec) {
     workingDir rootDir
     commandLine 'bash', 'scripts/generate-hlc.sh'
-    inputs.files(fileTree("${rootDir}/src"), file("${rootDir}/game.hxml"))
+    inputs.files(fileTree("${rootDir}/src"), fileTree("${rootDir}/lib"), fileTree("${rootDir}/assets"), fileTree("${rootDir}/tests/android"), file("${rootDir}/game.hxml"))
     outputs.dir("${rootDir}/build/hlc")
 }
 tasks.configureEach { task ->
