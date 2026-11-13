@@ -27,6 +27,10 @@ class StorageTest {
         eq(Storage.deleteFile('folder/data'),true,'delete');
         eq(Storage.readFile('folder/data'),null,'deleted');
         var p = Preferences.open('settings',1,function(_,data) return data);
+        eq(p.getBool('missingBool',true),true,'missing bool fallback');
+        eq(p.getInt('missingInt',37),37,'missing integer fallback');
+        eq(p.getFloat('missingFloat',0.35),0.35,'missing float fallback');
+        eq(p.getString('missingString','Hello'),'Hello','missing string fallback');
         p.setBool('enabled',true); p.setInt('score',23); p.setFloat('volume',0.4); p.setString('text','é中😀');
         eq(p.commit(),true,'commit');
         p = Preferences.open('settings',1,function(_,data) return data);
@@ -48,6 +52,13 @@ class StorageTest {
         eq(Storage.readFile('future.json').toString(),'{"version":9,"values":{"value":13},"future":"untouched"}','future original intact');
         Storage.writeFileAtomic('wrong.json',Bytes.ofString('{"version":1,"values":{"b":"true","i":2.5,"s":false,"f":"0.5"}}'));
         p=Preferences.open('wrong',1,function(_,d)return d); eq(p.getBool('b',false),false,'typed bool'); eq(p.getInt('i',8),8,'typed integer'); eq(p.getString('s','x'),'x','typed string'); eq(p.getFloat('f',0.2),0.2,'typed float');
+        Storage.writeFileAtomic('nulls.json',Bytes.ofString('{"version":1,"values":{"b":null,"i":null,"f":null,"s":null}}'));
+        p=Preferences.open('nulls',1,function(_,d)return d);
+        eq(p.getBool('b',true),true,'null bool fallback'); eq(p.getInt('i',37),37,'null integer fallback');
+        eq(p.getFloat('f',0.75),0.75,'null float fallback'); eq(p.getString('s','Hello'),'Hello','null string fallback');
+        Storage.writeFileAtomic('null-version.json',Bytes.ofString('{"version":null,"values":{"volume":0.9}}'));
+        p=Preferences.open('null-version',1,function(_,d)return d);
+        eq(p.getFloat('volume',0.35),0.35,'null schema fallback');
         // A destination directory prevents rename; the old entry survives and temp files are removed.
         sys.FileSystem.createDirectory(base+'/files/blocked');
         eq(Storage.writeFileAtomic('blocked',Bytes.ofString('bad')),false,'failed rename');

@@ -7,8 +7,9 @@ class SettingsTest {
         var dir='/tmp/heaps-settings-'+Std.int(haxe.Timer.stamp()*1000);
         @:privateAccess Storage.roots=new StorageRoots(dir,dir+'/cache');
         var s=new DemoSettings(); eq(s.musicVolume,0.35,'default music'); eq(s.sfxVolume,0.75,'default sfx');
+        eq(s.haptics,true,'default haptics');
         s.musicVolume=3; s.sfxVolume=-1; s.musicMuted=true; s.sfxMuted=true; s.haptics=false; s.editorText='é中😀'; eq(s.commit(),true,'save');
         s=new DemoSettings(); eq(s.musicVolume,1.,'music clamp'); eq(s.sfxVolume,0.,'sfx clamp'); eq(s.musicMuted,true,'music mute'); eq(s.sfxMuted,true,'sfx mute'); eq(s.haptics,false,'haptics'); eq(s.editorText,'é中😀','editor');
-        Sys.command('rm',['-rf',dir]); Sys.println('Settings: 9 assertions passed');
+        Sys.command('rm',['-rf',dir]); Sys.println('Settings: 10 assertions passed');
     }
 }

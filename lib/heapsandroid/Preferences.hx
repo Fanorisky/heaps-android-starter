@@ -17,19 +17,20 @@ class Preferences {
             var doc:Dynamic=haxe.Json.parse(bytes.toString());
             var version:Dynamic=Reflect.field(doc,'version');
             var data:Dynamic=Reflect.field(doc,'values');
-            if(!object(doc) || !Std.isOfType(version,Int) || version<1 || !object(data)) return prefs;
+            if(!object(doc) || version==null || !Std.isOfType(version,Int) || version<1 || !object(data)) return prefs;
             if(version>schemaVersion) prefs.future=true;
             else if(version<schemaVersion) data=migrate==null ? {} : migrate(version,data);
             if(object(data)) prefs.values=data;
         } catch(_:Dynamic) {}
         return prefs;
     }
-    public function getBool(key:String,fallback:Bool):Bool { var v=Reflect.field(values,key); return Std.isOfType(v,Bool)?v:fallback; }
-    public function getInt(key:String,fallback:Int):Int { var v=Reflect.field(values,key); return Std.isOfType(v,Int)?v:fallback; }
+    // HashLink primitive type checks accept null; reject it before unboxing.
+    public function getBool(key:String,fallback:Bool):Bool { var v=Reflect.field(values,key); return v!=null && Std.isOfType(v,Bool)?v:fallback; }
+    public function getInt(key:String,fallback:Int):Int { var v=Reflect.field(values,key); return v!=null && Std.isOfType(v,Int)?v:fallback; }
     public function getFloat(key:String,fallback:Float):Float {
-        var v=Reflect.field(values,key); return (Std.isOfType(v,Float) && Math.isFinite(v))?v:fallback;
+        var v=Reflect.field(values,key); return (v!=null && Std.isOfType(v,Float) && Math.isFinite(v))?v:fallback;
     }
-    public function getString(key:String,fallback:String):String { var v=Reflect.field(values,key); return Std.isOfType(v,String)?v:fallback; }
+    public function getString(key:String,fallback:String):String { var v=Reflect.field(values,key); return v!=null && Std.isOfType(v,String)?v:fallback; }
     public function setBool(key:String,value:Bool):Void Reflect.setField(values,key,value);
     public function setInt(key:String,value:Int):Void Reflect.setField(values,key,value);
     public function setFloat(key:String,value:Float):Void { if(Math.isFinite(value)) Reflect.setField(values,key,value); else remove(key); }

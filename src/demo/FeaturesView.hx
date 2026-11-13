@@ -14,6 +14,7 @@ import heapsandroid.Device;
 import heapsandroid.Lifecycle;
 import heapsandroid.Lifecycle.LifecycleEvent;
 import AudioRegression;
+import PreferencesRegression;
 import heapsandroid.Audio.AudioState;
 
 typedef FeatureButton={x:Float,y:Float,w:Float,h:Float,action:Void->Void};
@@ -92,7 +93,10 @@ class FeaturesView extends Object {
         statusText=label('Tap a control to test the Android host.',18,553,0.66);statusText.maxWidth=324;
         button('BACK TO NEON DRIFT',40,595,280,32,function(){hideView();close();});
         unsubscribe=Lifecycle.subscribe(function(event){if(event==Background){cancelEditor();settings.commit();}});
-        visible=false;applySettings();refresh();
+        visible=false;
+        if(PreferencesRegression.run()) applySettings();
+        else status('Preferences self-check failed; startup defaults were not saved');
+        refresh();
     }
     function label(value:String,x:Float,y:Float,scale:Float,color:Int=WHITE):Text {
         var t=new Text(hxd.res.DefaultFont.get(),this); t.text=value;t.x=x;t.y=y;t.setScale(scale);t.textColor=color;return t;
