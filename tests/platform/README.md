@@ -19,3 +19,10 @@ haxe -cp lib -cp tests/platform -lib heaps -lib hlsdl -lib hlopenal -lib format 
 These host checks do not exercise Android/JNI, a real IME, sensors, vibration,
 audio focus or applied window flags. APK/emulator/device checks establish those
 behaviors; `ApiCompile` must not be executed as a hardware proof.
+
+`StartupRegression.hx` is an Android-backed cold-start application. Build it
+with the same library flags as `ApiCompile`, add `-D resourcesPath=assets`, and
+use `-main StartupRegression`. In `hxd.App.init`, before the first MainLoop tick,
+it checks synchronized lifecycle state/callback ordering and creation of a real
+music channel. It reports `ANDROID_STARTUP_TEST_PASS` or `FAIL` in Android logs.
+Compilation alone does not establish these runtime checks.

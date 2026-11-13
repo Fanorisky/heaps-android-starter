@@ -13,6 +13,8 @@ class Android {
  public static function init():Void {
   if(initialized) return;
   prepare(); Native.init(); initialized = true;
+  // Startup playback may run before the first MainLoop tick.
+  update();
   pump = haxe.MainLoop.add(update, 100); pump.isBlocking = false;
  }
  public static function update():Void {
