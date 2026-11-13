@@ -1,0 +1,43 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'io.heaps.neondrift'
+    compileSdk 35
+    ndkVersion '28.2.13676358'
+    defaultConfig {
+        applicationId 'io.heaps.neondrift'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+        ndk { abiFilters.addAll((project.findProperty('androidAbis') ?: 'arm64-v8a,x86_64').split(',').toList()) }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared', '-DCMAKE_JOB_POOLS=compile=2', '-DCMAKE_JOB_POOL_COMPILE=compile'
+                targets 'main', 'hl', 'SDL2'
+                cFlags '-O2'
+                cppFlags '-O2'
+            }
+        }
+    }
+    sourceSets.main.java.srcDirs += ["${rootDir}/vendor/sdl/android-project/app/src/main/java"]
+    externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.30.3' } }
+    buildTypes {
+        debug { debuggable true }
+        release { minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+def generateHlc = tasks.register('generateHlc', Exec) {
+    workingDir rootDir
+    commandLine 'bash', 'scripts/generate-hlc.sh'
+    inputs.files(fileTree("${rootDir}/src"), file("${rootDir}/game.hxml"))
+    outputs.dir("${rootDir}/build/hlc")
+}
+tasks.configureEach { task ->
+    if (task.name.startsWith('configureCMake') || task.name == 'preBuild') task.dependsOn(generateHlc)
+}

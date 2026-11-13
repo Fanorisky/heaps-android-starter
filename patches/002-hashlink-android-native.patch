@@ -1,0 +1,72 @@
+--- a/hashlink/libs/sdl/gl.c
++++ b/hashlink/libs/sdl/gl.c
+@@ -24,7 +24,7 @@
+ #	define HL_GLES
+ #elif defined(HL_ANDROID)
+ #	include <SDL.h>
+-#	include <GLES3/gl3.h>
++#	include <GLES3/gl32.h>
+ #	include <GLES3/gl3ext.h>
+ #	define HL_GLES
+ #else
+@@ -702,10 +702,10 @@
+ }
+ 
+ HL_PRIM void HL_NAME(gl_shader_storage_block_binding)( vdynamic *p, int index, int binding ) {
+-#ifndef __APPLE__
++#if !defined(__APPLE__) && !defined(HL_GLES)
+ 	glShaderStorageBlockBinding(p->v.i, index, binding);
+ #else
+-	hl_error("glShaderStorageBlockBinding is not supported on Apple platforms");
++	hl_error("glShaderStorageBlockBinding is not supported on this platform; GLES uses shader layout bindings");
+ #endif
+ }
+ 
+--- a/hashlink/src/hlc_main.c
++++ b/hashlink/src/hlc_main.c
+@@ -67,8 +67,19 @@
+ #	define _CrtCheckMemory()
+ #endif
+ 
+-#if defined(HL_LINUX) || defined(HL_MAC)
+-#	include <execinfo.h>
++#if defined(HL_ANDROID)
++# include <unwind.h>
++# include <dlfcn.h>
++typedef struct { void **stack; int count; int size; int skip; } hlc_android_stack;
++static _Unwind_Reason_Code hlc_android_unwind(struct _Unwind_Context *context, void *arg) {
++    hlc_android_stack *state = (hlc_android_stack *)arg;
++    uintptr_t ip = _Unwind_GetIP(context);
++    if (state->skip > 0) { state->skip--; return _URC_NO_REASON; }
++    if (ip && state->count < state->size) state->stack[state->count++] = (void *)ip;
++    return state->count == state->size ? _URC_END_OF_STACK : _URC_NO_REASON;
++}
++#elif defined(HL_LINUX) || defined(HL_MAC)
++# include <execinfo.h>
+ #endif
+ 
+ static uchar *hlc_resolve_symbol( void *addr, uchar *out, int *outSize ) {
+@@ -96,6 +107,12 @@
+ 		*outSize = usprintf(out,*outSize,USTR("%s(%s:%d)"),data.sym.Name,wcsrchr(line.FileName,'\\')+1,(int)line.LineNumber);
+ 		return out;
+ 	}
++#elif defined(HL_ANDROID)
++    Dl_info info;
++    if (dladdr(addr, &info) && info.dli_sname) {
++        *outSize = usprintf(out, *outSize, USTR("%s"), hl_to_utf16(info.dli_sname));
++        return out;
++    }
+ #elif defined(HL_LINUX) || defined(HL_MAC)
+ 	void *array[1];
+ 	char **strings;
+@@ -116,6 +133,10 @@
+ 	int count = 0;
+ #	ifdef HL_WIN_DESKTOP
+ 	count = CaptureStackBackTrace(2, size, stack, NULL) - 8; // 8 startup
++# elif defined(HL_ANDROID)
++    hlc_android_stack state = { stack, 0, size, 2 };
++    _Unwind_Backtrace(hlc_android_unwind, &state);
++    count = state.count;
+ #	elif defined(HL_LINUX)
+ 	count = backtrace(stack, size) - 8;
+ #	elif defined(HL_MAC)

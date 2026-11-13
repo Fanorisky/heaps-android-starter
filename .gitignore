@@ -8,3 +8,5 @@
 /app/build/
 /app/.cxx/
 *.log
+__pycache__/
+*.pyc

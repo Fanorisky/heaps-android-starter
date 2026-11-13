@@ -1,0 +1,38 @@
+--- a/heaps/h3d/impl/GlDriver.hx
++++ b/heaps/h3d/impl/GlDriver.hx
+@@ -1615,7 +1615,11 @@
+ 		var totalSize = vertexCount*stride;
+ 		var type = b.flags.has(IndexBuffer) ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER;
+ 		gl.bindBuffer(type, b.vbuf);
++		#if (hlsdl < version("1.16.0"))
++		throw "GPU buffer readback requires hlsdl 1.16 or newer";
++		#else
+ 		gl.getBufferSubData(type, startVertex*stride, @:privateAccess buf.b, bufPos*STREAM_POS, totalSize);
++		#end
+ 		gl.bindBuffer(type, null);
+ 	}
+ 
+@@ -2241,7 +2245,11 @@
+ 		case Samples:
+ 			GL.beginQuery(GL.SAMPLES_PASSED, q.q);
+ 		case TimeElapsed:
++			#if (hlsdl < version("1.16.0"))
++			throw "GPU elapsed-time queries require hlsdl 1.16 or newer";
++			#else
+ 			GL.beginQuery(GL.TIME_ELAPSED, q.q);
++			#end
+ 		}
+ 	}
+ 
+@@ -2252,7 +2260,11 @@
+ 		case Samples:
+ 			GL.endQuery(GL.SAMPLES_PASSED);
+ 		case TimeElapsed:
++			#if (hlsdl < version("1.16.0"))
++			throw "GPU elapsed-time queries require hlsdl 1.16 or newer";
++			#else
+ 			GL.endQuery(GL.TIME_ELAPSED);
++			#end
+ 		}
+ 	}
+ 

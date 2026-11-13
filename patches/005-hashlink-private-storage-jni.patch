@@ -1,0 +1,30 @@
+--- a/hashlink/src/std/sys_android.c
++++ b/hashlink/src/std/sys_android.c
+@@ -183,7 +183,17 @@
+ 		}
+ 
+ 		mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), method, signature);
+-		fileObject = (*env)->CallObjectMethod(env, context, mid, NULL);
++		if (!mid) {
++            if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
++            return NULL;
++        }
++        fileObject = signature[1] == ')' ?
++            (*env)->CallObjectMethod(env, context, mid) :
++            (*env)->CallObjectMethod(env, context, mid, NULL);
++        if ((*env)->ExceptionCheck(env)) {
++            (*env)->ExceptionClear(env);
++            return NULL;
++        }
+ 		if (!fileObject) {
+ 			LOGE("Couldn't call %s%s on the specified context", method, signature);
+ 			return NULL;
+@@ -221,7 +231,7 @@
+ {
+ 	/* Internal storage is always available */
+ 	if (!hl_android_internal_files_path) {
+-		hl_android_internal_files_path = hl_sys_android_get_absolute_path_from("getFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
++		hl_android_internal_files_path = hl_sys_android_get_absolute_path_from("getFilesDir", "()Ljava/io/File;");
+ 	}
+ 
+ 	return hl_android_internal_files_path;

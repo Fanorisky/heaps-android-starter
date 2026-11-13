@@ -1,0 +1,38 @@
+{
+  "arm64-v8a": {
+    "libmain.so": {
+      "bytes": 6130592,
+      "machine": "AArch64"
+    },
+    "libhl.so": {
+      "bytes": 614168,
+      "machine": "AArch64"
+    },
+    "libSDL2.so": {
+      "bytes": 1229232,
+      "machine": "AArch64"
+    },
+    "libc++_shared.so": {
+      "bytes": 1253544,
+      "machine": "AArch64"
+    }
+  },
+  "x86_64": {
+    "libmain.so": {
+      "bytes": 6448808,
+      "machine": "Advanced Micro Devices X86-64"
+    },
+    "libhl.so": {
+      "bytes": 647968,
+      "machine": "Advanced Micro Devices X86-64"
+    },
+    "libSDL2.so": {
+      "bytes": 1363000,
+      "machine": "Advanced Micro Devices X86-64"
+    },
+    "libc++_shared.so": {
+      "bytes": 1229808,
+      "machine": "Advanced Micro Devices X86-64"
+    }
+  }
+}

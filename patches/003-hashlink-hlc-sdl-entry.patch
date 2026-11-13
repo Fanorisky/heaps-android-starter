@@ -1,0 +1,11 @@
+--- a/hashlink/src/hlc_main.c
++++ b/hashlink/src/hlc_main.c
+@@ -21,7 +21,7 @@
+  */
+ #include <hlc.h>
+ 
+-#if defined(HL_MOBILE) && defined(sdl__Sdl__val)
++#if defined(HL_MOBILE) && (defined(sdl__Sdl__val) || defined(HL_SDL))
+ #   include <SDL_main.h>
+ #endif
+ 

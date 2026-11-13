@@ -477,5 +477,15 @@ class Main extends hxd.App {
         shapes.endFill();
     }
 
-    static function main():Void { new Main(); }
+    static function main():Void {
+        #if android
+        // Android does not forward stderr to logcat; keep renderer failures visible.
+        hxd.System.reportError = function(error:Dynamic):Void {
+            Sys.println('Neon Drift: engine error: ' + Std.string(error)
+                + ' ' + haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+        };
+        sdl.Sdl.setHint('SDL_IOS_ORIENTATIONS', 'Portrait');
+        #end
+        new Main();
+    }
 }

@@ -1,0 +1,43 @@
+name: Build Android APK
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: '4.3.6'
+      - uses: android-actions/setup-android@v3
+      - name: Install pinned Android native toolchain
+        run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0' 'ndk;28.2.13676358' 'cmake;3.30.3'
+      - uses: actions/cache@v4
+        with:
+          path: vendor/.cache
+          key: native-sources-${{ runner.os }}-${{ hashFiles('third_party/dependencies.lock.json') }}
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test and build native APK for ARM64 and x86_64
+        run: ./scripts/build-apk.sh
+      - name: Verify APK signature and native entry points
+        run: python3 scripts/verify-apk.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neon-drift-debug-apk
+          path: |
+            dist/neon-drift-debug.apk
+            dist/neon-drift-debug.apk.sha256
+            dist/verification/apk.json
+            dist/verification/signature.txt
+          if-no-files-found: error
+          retention-days: 30

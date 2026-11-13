@@ -3,6 +3,7 @@
 -lib hlsdl
 -main Main
 -D android
+-D windowSize=360x640
 -D hl-ver=1.15.0
 -D no-compilation
 -dce full

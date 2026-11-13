@@ -1,0 +1,11 @@
+--- a/hashlink/src/hl.h
++++ b/hashlink/src/hl.h
+@@ -283,6 +283,8 @@
+ C_FUNCTION_BEGIN
+ HL_API void hl_debug_break( void );
+ C_FUNCTION_END
++#elif defined(__aarch64__)
++# define hl_debug_break() if( hl_detect_debugger() ) __asm__("brk #0xf000;")
+ #elif defined(HL_LINUX)
+ #	ifdef HL_64
+ #	define hl_debug_break() \

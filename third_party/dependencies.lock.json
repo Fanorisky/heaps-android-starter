@@ -1,0 +1,74 @@
+[
+  {
+    "name": "heaps",
+    "repository": "HeapsIO/heaps",
+    "revision": "3a970d27505131d00b2efd912511a1de094b374a",
+    "url": "https://codeload.github.com/HeapsIO/heaps/tar.gz/3a970d27505131d00b2efd912511a1de094b374a",
+    "sha256": "17bfa0deff55133d50361c5ff327c08aee25a12ae7405c996b60389cc58d59dd",
+    "archive": "heaps.tar.gz"
+  },
+  {
+    "name": "hashlink",
+    "repository": "HaxeFoundation/hashlink",
+    "revision": "742581569d4052babac359658e443e42c7c3e0c7",
+    "url": "https://codeload.github.com/HaxeFoundation/hashlink/tar.gz/742581569d4052babac359658e443e42c7c3e0c7",
+    "sha256": "c1522963f30613db0495dc35c2c9d98b930f12c4af58b69759373bedd5b746e6",
+    "archive": "hashlink.tar.gz"
+  },
+  {
+    "name": "sdl",
+    "repository": "libsdl-org/SDL",
+    "revision": "5d249570393f7a37e037abf22cd6012a4cc56a71",
+    "url": "https://codeload.github.com/libsdl-org/SDL/tar.gz/5d249570393f7a37e037abf22cd6012a4cc56a71",
+    "sha256": "10f1194f8d2e4a73ca1c7c553b3189d0b68ab9ef3544e8d2a268e4429456b373",
+    "archive": "sdl.tar.gz"
+  },
+  {
+    "name": "png",
+    "repository": "pnggroup/libpng",
+    "revision": "872555f4ba910252783af1507f9e7fe1653be252",
+    "url": "https://codeload.github.com/pnggroup/libpng/tar.gz/872555f4ba910252783af1507f9e7fe1653be252",
+    "sha256": "f7ebcdc408a26d45244d9ef3d35d732a5482a77c55d1d40bf1eb748030691097",
+    "archive": "png.tar.gz"
+  },
+  {
+    "name": "zlib",
+    "repository": "madler/zlib",
+    "revision": "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+    "url": "https://codeload.github.com/madler/zlib/tar.gz/51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+    "sha256": "d9e270d46252734aa49770fbc544125391617956266f220bd63216c834f3a522",
+    "archive": "zlib.tar.gz"
+  },
+  {
+    "name": "jpeg",
+    "repository": "libjpeg-turbo/libjpeg-turbo",
+    "revision": "20ade4dea9589515a69793e447a6c6220b464535",
+    "url": "https://codeload.github.com/libjpeg-turbo/libjpeg-turbo/tar.gz/20ade4dea9589515a69793e447a6c6220b464535",
+    "sha256": "b439b373685be152f105f9fdd109f62a68aff7d098d670e79186024acb6379eb",
+    "archive": "jpeg.tar.gz"
+  },
+  {
+    "name": "ogg",
+    "repository": "xiph/ogg",
+    "revision": "e1774cd77f471443541596e09078e78fdc342e4f",
+    "url": "https://codeload.github.com/xiph/ogg/tar.gz/e1774cd77f471443541596e09078e78fdc342e4f",
+    "sha256": "588af45a3329b89b4506e5205fd1c99e57f088f492b2a247fe9472f42ffe8e5f",
+    "archive": "ogg.tar.gz"
+  },
+  {
+    "name": "vorbis",
+    "repository": "xiph/vorbis",
+    "revision": "0657aee69dec8508a0011f47f3b69d7538e9d262",
+    "url": "https://codeload.github.com/xiph/vorbis/tar.gz/0657aee69dec8508a0011f47f3b69d7538e9d262",
+    "sha256": "6ccc3fa4cfd3072f9a772025cc8fd712098d081c00171b09b6627ffced7faa88",
+    "archive": "vorbis.tar.gz"
+  },
+  {
+    "name": "format",
+    "repository": "HaxeFoundation/format",
+    "revision": "3.8.0",
+    "url": "https://haxelib-files.haxe.org/files/3.0/format-3,8,0.zip",
+    "sha256": "ea3a6725ee707d54965550d5331c8b1eab5c548c35b3680622fb0ffa15b509fd",
+    "archive": "format.zip"
+  }
+]

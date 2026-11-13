@@ -1,0 +1,12 @@
+--- a/hashlink/libs/sdl/sdl.c
++++ b/hashlink/libs/sdl/sdl.c
+@@ -520,6 +520,9 @@
+ // Window
+ 
+ HL_PRIM SDL_Window *HL_NAME(win_create_ex)(int x, int y, int width, int height, int sdlFlags) {
++#ifdef HL_ANDROID
++	sdlFlags |= SDL_WINDOW_FULLSCREEN;
++#endif
+ 	// force window to match device resolution on mobile
+ 	if ((sdlFlags & (
+ #ifdef HL_MAC
