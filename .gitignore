@@ -1,0 +1,10 @@
+/build/
+/dist/
+/vendor/
+/.haxelib/
+/.gradle/
+/.superpowers/
+/local.properties
+/app/build/
+/app/.cxx/
+*.log
