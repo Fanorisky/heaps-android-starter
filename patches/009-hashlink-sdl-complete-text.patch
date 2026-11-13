@@ -1,0 +1,106 @@
+--- a/hashlink/libs/sdl/sdl.c
++++ b/hashlink/libs/sdl/sdl.c
+@@ -2,6 +2,7 @@
+ 
+ #include <hl.h>
+ #include <locale.h>
++#include "utf8_packet.h"
+ 
+ #if defined(_WIN32) || defined(__ANDROID__) || defined(HL_IOS) || defined(HL_TVOS)
+ #	include <SDL.h>
+@@ -99,6 +100,33 @@
+ 	vbyte* dropFile;
+ } event_data;
+ 
++/* Keep the rest of an SDL commit ahead of later keyboard/window events. */
++static SDL_SpinLock heaps_text_lock;
++static SDL_TextInputEvent heaps_text_commit;
++static size_t heaps_text_position, heaps_text_length;
++
++void sdl_cancel_text_input(void) {
++ SDL_AtomicLock(&heaps_text_lock);
++ heaps_text_position = heaps_text_length = 0;
++ SDL_AtomicUnlock(&heaps_text_lock);
++ SDL_FlushEvents(SDL_TEXTEDITING, SDL_TEXTINPUT);
++ SDL_StopTextInput();
++}
++
++static bool heaps_text_next(event_data *event) {
++ uint32_t packed;
++ SDL_AtomicLock(&heaps_text_lock);
++ int found = heaps_utf8_next((unsigned char*)heaps_text_commit.text,
++  heaps_text_length, &heaps_text_position, &packed);
++ if (found) {
++  event->type = TextInput;
++  event->window = heaps_text_commit.windowID;
++  event->keyCode = (int)packed;
++ }
++ SDL_AtomicUnlock(&heaps_text_lock);
++ return found != 0;
++}
++
+ static bool isGlOptionsSet = false;
+ 
+ HL_PRIM bool HL_NAME(init_once)() {
+@@ -167,6 +195,7 @@
+ }
+ 
+ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
++	if (heaps_text_next(event)) return true;
+ 	while (true) {
+ 		SDL_Event e;
+ 		if (SDL_PollEvent(&e) == 0) break;
+@@ -291,10 +320,12 @@
+ 			// skip
+ 			continue;
+ 		case SDL_TEXTINPUT:
+-			event->type = TextInput;
+-			event->window = e.text.windowID;
+-			event->keyCode = *(int*)e.text.text;
+-			event->keyCode &= e.text.text[0] ? e.text.text[1] ? e.text.text[2] ? e.text.text[3] ? 0xFFFFFFFF : 0xFFFFFF : 0xFFFF : 0xFF : 0;
++			SDL_AtomicLock(&heaps_text_lock);
++			heaps_text_commit = e.text;
++			heaps_text_position = heaps_text_length = 0;
++			while (heaps_text_length < sizeof(e.text.text) && e.text.text[heaps_text_length]) heaps_text_length++;
++			SDL_AtomicUnlock(&heaps_text_lock);
++			if (!heaps_text_next(event)) continue;
+ 			break;
+ 		case SDL_CONTROLLERDEVICEADDED:
+ 			event->type = GControllerAdded;
+@@ -448,7 +479,7 @@
+ 	if( enable )
+ 		SDL_StartTextInput();
+ 	else
+-		SDL_StopTextInput();
++		sdl_cancel_text_input();
+ }
+ 
+ HL_PRIM int HL_NAME(set_relative_mouse_mode)(bool enable) {
+--- /dev/null
++++ b/hashlink/libs/sdl/utf8_packet.h
+@@ -0,0 +1,25 @@
++#ifndef HEAPS_UTF8_PACKET_H
++#define HEAPS_UTF8_PACKET_H
++#include <stddef.h>
++#include <stdint.h>
++/* Consume one Unicode scalar and preserve the little-endian packed UTF8
++ * representation decoded by hxd.Window. Malformed maximal subsequences yield
++ * the packed UTF8 replacement character; reads never exceed length. */
++static inline int heaps_utf8_next(const unsigned char *text, size_t length,
++ size_t *position, uint32_t *packed) {
++ size_t start=*position;
++ if(start>=length)return 0;
++ unsigned char lead=text[start];
++ if(lead<0x80){*packed=lead;*position=start+1;return 1;}
++ int width=lead>=0xc0&&lead<=0xdf?2:lead>=0xe0&&lead<=0xef?3:lead>=0xf0&&lead<=0xf7?4:1;
++ size_t end=start+1;
++ while(end<length && end<start+(size_t)width && (text[end]&0xc0)==0x80)end++;
++ uint32_t cp=lead&((1U<<(7-width))-1U);
++ for(size_t i=start+1;i<end;i++)cp=(cp<<6)|(text[i]&0x3f);
++ uint32_t min=width==2?0x80:width==3?0x800:0x10000;
++ int valid=width>1 && end==start+(size_t)width && cp>=min && cp<=0x10ffff && !(cp>=0xd800&&cp<=0xdfff);
++ *packed=0x00bdbfef;
++ if(valid){*packed=0;for(int i=0;i<width;i++)*packed|=(uint32_t)text[start+i]<<(i*8);}
++ *position=end;return 1;
++}
++#endif

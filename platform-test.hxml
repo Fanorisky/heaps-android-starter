@@ -1,0 +1,4 @@
+-cp lib
+-cp tests/platform
+-main PlatformTest
+--interp
