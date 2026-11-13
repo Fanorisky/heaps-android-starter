@@ -1,0 +1,9 @@
+-cp src
+-lib heaps
+-lib hlsdl
+-main Main
+-D android
+-D hl-ver=1.15.0
+-D no-compilation
+-dce full
+-hl build/hlc/game.c
