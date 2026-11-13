@@ -53,7 +53,14 @@ class FeaturesView extends Object {
         button('PAUSE',84,116,60,28,function(){Audio.pause();status('Audio paused');});
         button('RESUME',150,116,60,28,function(){status(Audio.resume()?'Audio resumed':'Audio unavailable / focus denied');});
         button('STOP',216,116,54,28,function(){Audio.stopMusic();status('Music stopped');});
-        button('CHECKS',276,116,66,28,function(){status('Audio checks running');AudioRegression.start(hxd.Res.music,function(ok,message){status(message);});});
+        button('CHECKS',276,116,66,28,function(){
+            status('Audio checks running');
+            AudioRegression.start(hxd.Res.music,function(ok,message){
+                Sys.println((ok ? 'AUDIO_TEST_PASS ' : 'AUDIO_TEST_FAIL ') + message);
+                status((ok ? 'Audio checks passed: ' : 'Audio checks failed: ') + message);
+                statusText.textColor = ok ? WHITE : 0xff587f;
+            });
+        });
         musicText=label('',18,151,0.7);
         button('-',160,148,36,27,function(){settings.musicVolume-=0.1;applySettings();});
         button('+',202,148,36,27,function(){settings.musicVolume+=0.1;applySettings();});
@@ -95,7 +102,7 @@ class FeaturesView extends Object {
         var t=label(value,0,y+8,0.65,CYAN);t.x=x+(w-t.textWidth*t.scaleX)/2;
         buttons.push({x:x,y:y,w:w,h:h,action:action});
     }
-    function status(value:String):Void {statusText.text=value;Sys.println('Heaps Android Features: '+value);}
+    function status(value:String):Void {statusText.text=value;statusText.textColor=WHITE;Sys.println('Heaps Android Features: '+value);}
     function testSound(sound:hxd.res.Sound):Void status(Audio.playSfx(sound)!=null?'SFX requested':'Audio unavailable / focus denied');
     public function applySettings():Void {
         Audio.musicVolume=settings.musicVolume;Audio.sfxVolume=settings.sfxVolume;
