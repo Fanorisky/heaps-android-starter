@@ -27,6 +27,15 @@ class GameModel {
     public var invulnerable(default, null):Float = 0;
     public var entities(default, null):Array<Entity> = [];
 
+    var events:Array<String> = [];
+
+    /** Consume game cues without changing simulation or collision timing. */
+    public function takeEvents():Array<String> {
+        var result = events;
+        events = [];
+        return result;
+    }
+
     var randomState:Int;
     var targetX:Float = 180;
     var nextObstacle:Float = 0.65;
@@ -40,7 +49,7 @@ class GameModel {
     }
 
     public function start():Void {
-        if (phase == 'title') phase = 'playing';
+        if (phase == 'title') { phase = 'playing'; events.push('start'); }
     }
 
     public function setShipTargetX(x:Float):Void {
@@ -87,9 +96,10 @@ class GameModel {
             var radius = SHIP_RADIUS + entity.radius;
             if (dx * dx + dy * dy < radius * radius) {
                 entities.splice(index, 1);
-                if (entity.kind == 'energy') energyScore += 25;
+                if (entity.kind == 'energy') { energyScore += 25; events.push('pickup'); }
                 else if (invulnerable <= 0) {
                     health--;
+                    events.push('hit');
                     invulnerable = 1.2;
                 }
             } else if (entity.y - entity.radius > HEIGHT) entities.splice(index, 1);
@@ -116,6 +126,7 @@ class GameModel {
     }
 
     public function restart(seed:Int):Void {
+        events = ['start'];
         randomState = seed == 0 ? 0x13579b : seed;
         phase = 'playing';
         elapsed = 0;
@@ -132,6 +143,7 @@ class GameModel {
 
     function finish(result:String):Void {
         phase = result;
+        events.push(result);
         targetX = shipX;
         bestScore = Std.int(Math.min(MAX_BEST, Math.max(bestScore, score)));
     }

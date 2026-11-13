@@ -3,6 +3,13 @@ import h2d.Graphics;
 import h2d.Object;
 import h2d.Text;
 import hxd.Event;
+import heapsandroid.Android;
+import heapsandroid.Audio;
+import heapsandroid.Storage;
+import heapsandroid.Lifecycle;
+import heapsandroid.Lifecycle.LifecycleEvent;
+import demo.FeaturesView;
+import demo.DemoSettings;
 
 class Main extends hxd.App {
     static inline var CYAN = 0x65edff;
@@ -13,6 +20,9 @@ class Main extends hxd.App {
     static inline var SAVE_NAME = 'neon-drift-best';
 
     var model:GameModel;
+    var features:FeaturesView;
+    var settings:DemoSettings;
+    var unsubscribeLifecycle:Void->Void;
     var background:Graphics;
     var world:Graphics;
     var hud:Object;
@@ -30,15 +40,14 @@ class Main extends hxd.App {
     var saveReady:Bool = false;
     var saveFailed:Bool = false;
 
-    #if android
-    @:hlNative('std', 'sys_special')
-    private static function nativePath(key:hl.Bytes):hl.Bytes { return null; }
-    #end
-
     override function init():Void {
         engine.backgroundColor = 0x07101e;
         s2d.scaleMode = LetterBox(360, 640);
-        hxd.Window.getInstance().title = 'Neon Drift';
+        hxd.Window.getInstance().title = 'Heaps Android Proof';
+        Android.init();
+        hxd.Res.initEmbed();
+        Audio.init();
+        settings = new DemoSettings();
         hxd.Timer.smoothFactor = 0;
         hxd.Timer.maxDeltaTime = 0.1;
         configureStorage();
@@ -68,33 +77,31 @@ class Main extends hxd.App {
         input.onRelease = function(event) { if (event.touchId == pointerId) clearPointer(); };
         input.onReleaseOutside = function(event) { if (event.touchId == pointerId) clearPointer(); };
         hxd.Window.getInstance().addEventTarget(onWindowEvent);
+        features = new FeaturesView(s2d, settings, function() {
+            world.visible = true;
+            renderPhase();
+        });
+        unsubscribeLifecycle = Lifecycle.subscribe(function(event) {
+            if (event == Background || event == FocusLost) {
+                clearPointer(); model.pause(); hxd.Timer.reset();
+                if (!features.visible) renderPhase();
+            }
+        });
+        Audio.playMusic(hxd.Res.music, true);
         renderPhase();
         draw();
     }
 
     function configureStorage():Void {
         try {
-            var directory:String;
-            #if android
-            var bytes = nativePath(@:privateAccess 'android_internal_storage_path'.toUtf8());
-            if (bytes == null) throw 'Android private storage is unavailable';
-            directory = @:privateAccess String.fromUTF8(bytes);
-            if (directory == null || directory.length == 0) throw 'Android private storage is empty';
-            #else
-            directory = '.neon-drift';
-            if (!sys.FileSystem.exists(directory)) sys.FileSystem.createDirectory(directory);
-            #end
-            var path = directory + '/' + SAVE_NAME + '.sav';
-            hxd.Save.readSaveData = function(_) return sys.io.File.getContent(path);
+            hxd.Save.readSaveData = function(_) {
+                var bytes = Storage.readFile(SAVE_NAME + '.sav');
+                if (bytes == null) throw 'Best score is unavailable';
+                return bytes.toString();
+            };
             hxd.Save.writeSaveData = function(_, data) {
-                var temporary = path + '.tmp';
-                try {
-                    sys.io.File.saveContent(temporary, data);
-                    sys.FileSystem.rename(temporary, path);
-                } catch (error:Dynamic) {
-                    try if (sys.FileSystem.exists(temporary)) sys.FileSystem.deleteFile(temporary) catch (_:Dynamic) {}
-                    throw error;
-                }
+                if (!Storage.writeFileAtomic(SAVE_NAME + '.sav', haxe.io.Bytes.ofString(data)))
+                    throw 'Best score write failed';
             };
             saveReady = true;
         } catch (error:Dynamic) {
@@ -130,6 +137,8 @@ class Main extends hxd.App {
     }
 
     function onWindowEvent(event:Event):Void {
+        features.onWindowEvent(event);
+        if (features.visible) return;
         switch (event.kind) {
             case EFocusLost:
                 clearPointer();
@@ -162,9 +171,11 @@ class Main extends hxd.App {
         if (pointerId != -1) return;
         var x = event.relX;
         var y = event.relY;
+        if (features.visible) { features.click(x, y); return; }
         switch (model.phase) {
             case 'title':
                 if (inside(x, y, 40, 450, 280, 54)) startRun();
+                else if (inside(x, y, 40, 542, 280, 28)) showFeatures();
             case 'playing':
                 if (inside(x, y, 292, 21, 44, 44)) pauseRun();
                 else {
@@ -174,8 +185,10 @@ class Main extends hxd.App {
             case 'paused':
                 if (inside(x, y, 48, 368, 264, 54)) resumeRun();
                 else if (inside(x, y, 48, 434, 264, 46)) restartRun();
+                else if (inside(x, y, 48, 488, 264, 28)) showFeatures();
             case 'won', 'lost':
                 if (inside(x, y, 48, 434, 264, 54)) restartRun();
+                else if (inside(x, y, 48, 490, 264, 28)) showFeatures();
             default:
         }
     }
@@ -183,6 +196,8 @@ class Main extends hxd.App {
     function startRun():Void {
         clearPointer();
         model.start();
+        Audio.resume();
+        playGameEvents();
         hxd.Timer.reset();
         renderPhase();
     }
@@ -190,6 +205,7 @@ class Main extends hxd.App {
     function pauseRun():Void {
         clearPointer();
         model.pause();
+        Audio.pause();
         hxd.Timer.reset();
         renderPhase();
     }
@@ -197,6 +213,8 @@ class Main extends hxd.App {
     function resumeRun():Void {
         clearPointer();
         model.resume();
+        Audio.resume();
+        Audio.playSfx(hxd.Res.ui);
         hxd.Timer.reset();
         renderPhase();
     }
@@ -204,6 +222,8 @@ class Main extends hxd.App {
     function restartRun():Void {
         clearPointer();
         model.restart(newSeed());
+        Audio.resume();
+        playGameEvents();
         hxd.Timer.reset();
         renderPhase();
     }
@@ -215,13 +235,41 @@ class Main extends hxd.App {
                 - (hxd.Key.isDown(hxd.Key.LEFT) || hxd.Key.isDown(hxd.Key.A) ? 1 : 0);
             if (direction != 0) model.setShipTargetX(model.shipX + direction * 480 * Math.min(dt, 0.1));
         }
+        features.update();
         model.update(dt);
+        playGameEvents();
         if (model.phase != phaseShown) {
             clearPointer();
             if (model.phase == 'won' || model.phase == 'lost') persistBest();
             renderPhase();
         }
-        draw();
+        if (!features.visible) draw();
+    }
+
+    function showFeatures():Void {
+        clearPointer(); model.pause();
+        Audio.playSfx(hxd.Res.ui);
+        panel.visible = hud.visible = world.visible = false;
+        features.showView();
+    }
+
+    function playGameEvents():Void {
+        for (event in model.takeEvents()) switch (event) {
+            case 'start': Audio.playSfx(hxd.Res.start);
+            case 'pickup': Audio.playSfx(hxd.Res.pickup);
+            case 'hit': Audio.playSfx(hxd.Res.hit);
+            case 'won': Audio.playSfx(hxd.Res.win);
+            case 'lost': Audio.playSfx(hxd.Res.lose);
+            default:
+        }
+    }
+
+    override function dispose():Void {
+        if (features != null) features.shutdown();
+        if (unsubscribeLifecycle != null) unsubscribeLifecycle();
+        hxd.Window.getInstance().removeEventTarget(onWindowEvent);
+        Android.shutdown();
+        super.dispose();
     }
 
     function label(parent:Object, text:String, x:Float, y:Float, scale:Float, color:Int):Text {
@@ -256,6 +304,7 @@ class Main extends hxd.App {
     }
 
     function renderPhase():Void {
+        panel.visible = true;
         phaseShown = model.phase;
         Sys.println('Neon Drift: phase=' + model.phase + ' score=' + model.score
             + ' best=' + model.bestScore + ' remaining=' + Std.int(Math.ceil(model.remaining)));
@@ -278,7 +327,8 @@ class Main extends hxd.App {
             shapes.endFill();
             label(panel, 'COLLECT', 208, 389, 0.75, MUTED);
             button(shapes, panel, 'START RUN  >', 40, 450, 280, 54, true);
-            centered(panel, '3 HITS. ONE SHOT AT THE SECTOR.', 528, 0.63, MUTED);
+            centered(panel, '3 HITS. ONE SHOT AT THE SECTOR.', 521, 0.63, MUTED);
+            button(shapes, panel, 'DEVELOPER FEATURES', 40, 542, 280, 28, false);
             centered(panel, 'PERSONAL BEST  ' + model.bestScore, 582, 0.8, LIME);
             if (saveFailed) centered(panel, 'BEST SCORE STORAGE UNAVAILABLE', 611, 0.6, PINK);
             return;
@@ -301,6 +351,7 @@ class Main extends hxd.App {
             centered(panel, Std.int(Math.ceil(model.remaining)) + ' SECONDS REMAIN', 304, 0.95, CYAN);
             button(shapes, panel, 'RESUME  >', 48, 368, 264, 54, true);
             button(shapes, panel, 'RESTART RUN', 48, 434, 264, 46, false);
+            button(shapes, panel, 'DEVELOPER FEATURES', 48, 488, 264, 28, false);
         } else {
             var won = model.phase == 'won';
             centered(panel, won ? 'SECTOR CLEAR' : 'SHIP LOST', 191, 2.5, won ? CYAN : PINK);
@@ -309,7 +360,8 @@ class Main extends hxd.App {
             centered(panel, 'FINAL SCORE', 337, 0.65, MUTED);
             centered(panel, 'PERSONAL BEST  ' + model.bestScore, 367, 0.83, LIME);
             button(shapes, panel, 'DRIFT AGAIN  >', 48, 434, 264, 54, true);
-            if (saveFailed) centered(panel, 'BEST SCORE COULD NOT BE SAVED', 504, 0.6, PINK);
+            button(shapes, panel, 'DEVELOPER FEATURES', 48, 490, 264, 28, false);
+            if (saveFailed) centered(panel, 'BEST SCORE COULD NOT BE SAVED', 521, 0.6, PINK);
         }
     }
 
@@ -484,8 +536,8 @@ class Main extends hxd.App {
             Sys.println('Neon Drift: engine error: ' + Std.string(error)
                 + ' ' + haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
         };
-        sdl.Sdl.setHint('SDL_IOS_ORIENTATIONS', 'Portrait');
         #end
+        Android.prepare();
         new Main();
     }
 }

@@ -1,0 +1,16 @@
+{
+  "author": "Heaps Android Starter contributors (generated with Codex)",
+  "description": "Original procedural neon ship and sine-wave audio generated without external media.",
+  "license": "CC0-1.0",
+  "sampleRate": 22050,
+  "sha256": {
+    "hit.wav": "d6bbef1594ac45b986041e8c66daa4378f0cfee037dd3922bc035565000f488d",
+    "lose.wav": "a5814680113985383b43f37bd0c9bbf97265952fb08d2ab6b741771edbb2f750",
+    "music.wav": "8d29d7e035a9d9181b9fc432745fc976616093196b5f7e90770801bab074e42e",
+    "pickup.wav": "bc08f776787a7f7b48257b3700191924a5a57e2e79f24ea19d73f2faae7ab1c8",
+    "ship.png": "9c18314483fd2a1d920b71d32ba09c75c21d1eb1bf5b50a92f969649c3d9af51",
+    "start.wav": "bf3cc4000c9e168af9ef788d197b6ff45594c0801101f8b11bf5869e8877666e",
+    "ui.wav": "d08f0109ecbf247a01abddbaea07028b2e9fc26ca100a957c53a00c0a347a7ed",
+    "win.wav": "9281b481c25f02fe50d2c87f58ea1fe62cc35383fa4d3107265626ac77035499"
+  }
+}
