@@ -130,9 +130,17 @@ class Audio {
         };
     }
     public static function poll():Void {
-        gateRunning = initialized && sdkActive && AudioNative.getState() == Running;
+        var nativeState:AudioState = initialized ? cast AudioNative.getState() : Unavailable;
+        gateRunning = sdkActive && nativeState == Running;
         captureChannels();
         reconcileChannels(gateRunning);
+        if (nativeState == Unavailable && manager != null && manager.sources != null) {
+            // Disconnection can mark queued buffers processed. Detach before
+            // Manager.update consumes them and expires/resets paused channels.
+            // Keep the last synchronized channel position. Normal pauses still
+            // let Manager capture the final device sample offset as before.
+            for (source in manager.sources) if (source.channel != null) manager.releaseSource(source);
+        }
         if (music != null && music.channel.isReleased()) music = null;
         var index = 0;
         while (index < sfx.length) {

@@ -35,6 +35,9 @@ class RawAudioRegression {
     }
     public static function update():Void {
         if (!isRunning) return;
+        #if heapsandroid_audio_fault_tests
+        if (stage == 6) { AudioHealthRegression.update(); return; }
+        #end
         try {
             Audio.poll();
             var now = haxe.Timer.stamp(); if (now < deadline) return;
@@ -88,7 +91,12 @@ class RawAudioRegression {
                     var manager = @:privateAccess hxd.snd.Manager.instance;
                     check((@:privateAccess manager.channels) == null, "Recovery alone created channels");
                     var replay = sample.play(true); check(!replay.pause && Audio.state == Running, "Raw explicit replay after recovery denied"); replay.stop();
+                    #if heapsandroid_audio_fault_tests
+                    stage = 6;
+                    AudioHealthRegression.start(sample, function(ok, detail) finish(ok, detail));
+                    #else
                     finish(true, "Raw audible/muted loops freeze beyond duration; gated user pause, SDK stop/restart and real paused recovery invalidate all old channels");
+                    #end
             }
         } catch (error:Dynamic) { finish(false, Std.string(error)); }
     }
