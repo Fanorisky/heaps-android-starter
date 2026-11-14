@@ -19,6 +19,19 @@ class AudioHealthRegression {
     static function check(value:Bool, detail:String) { if (!value) throw detail; }
     public static function start(sound:Sound, report:(Bool, String)->Void):Void {
         sample = sound; callback = report; isRunning = true;
+        // Deliver an observed route change through Audio's real subscriber
+        // dispatch from the executing Manager hook. Only this fault fixture
+        // invalidates the cached observation; no production route injector.
+        var previous = @:privateAccess hxd.snd.Manager.instance;
+        var called = false;
+        var unsubscribe = Audio.subscribeRouteChanges(function(_) {
+            called = true;
+            check(Audio.recover(), "Recovery from route callback failed");
+        });
+        @:privateAccess Audio.observedRoute = Audio.routeGeneration - 1;
+        try previous.update() catch (error:Dynamic) { unsubscribe(); throw error; }
+        unsubscribe();
+        check(called && (@:privateAccess hxd.snd.Manager.instance) != previous && Audio.state == Paused, "Route subscriber did not safely replace its executing Manager");
         channel = sample.play(false);
         stage = 0; deadline = haxe.Timer.stamp() + 0.2;
     }

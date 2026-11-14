@@ -46,30 +46,78 @@
  		return c;
  	}
  
-@@ -296,6 +314,9 @@
+@@ -296,10 +314,19 @@
  	}
  
  	public function update() {
 +		#if heapsandroid_audio_hooks
 +		if (heapsAndroidBeforeUpdate != null) heapsAndroidBeforeUpdate();
++		// Route subscribers can recover/dispose this Manager from the hook.
++		// A replaced update must stop before touching cleared driver sources.
++		if (instance != this) return;
 +		#end
  		if( timeOffset != 0 ) {
  			var c = channels;
  			while( c != null ) {
+ 				c.lastStamp += timeOffset;
++				#if heapsandroid_audio_hooks
++				if (c.pause) c.heapsAndroidPauseStamp += timeOffset;
++				#end
+ 				if( c.currentFade != null ) c.currentFade.start += timeOffset;
+ 				c = c.next;
+ 			}
 --- a/heaps/hxd/snd/Channel.hx
 +++ b/heaps/hxd/snd/Channel.hx
-@@ -48,7 +48,14 @@
+@@ -21,6 +21,9 @@
+ 
+ 	var audibleVolume = 1.0;
+ 	var lastStamp = 0.0;
++	#if heapsandroid_audio_hooks
++	var heapsAndroidPauseStamp = 0.0;
++	#end
+ 	var isVirtual = false;
+ 	var isLoading = false;
+ 	var positionChanged = false;
+@@ -48,11 +51,34 @@
  	}
  
  	function set_pause(v : Bool) {
 +		#if heapsandroid_audio_hooks
 +		if (Manager.heapsAndroidFilterPause != null) v = Manager.heapsAndroidFilterPause(this, v);
-+		// Reset wall time once when effectively unpausing; a gate assignment
-+		// must not reset it every update or overwrite user pause intent.
-+		if (!v && pause) lastStamp = haxe.Timer.stamp();
++		// Capture effective pause boundaries once. A fade created while
++		// paused starts on resume; an existing fade keeps its elapsed offset.
++		if (v != pause) {
++			var now = haxe.Timer.stamp();
++			if (v) heapsAndroidPauseStamp = now;
++			else {
++				lastStamp = now;
++				if (currentFade != null)
++					currentFade.start += Math.max(now - Math.max(heapsAndroidPauseStamp, currentFade.start), 0.0);
++			}
++		}
 +		#else
  		if (!v) lastStamp = haxe.Timer.stamp();
 +		#end
  		return pause = v;
  	}
+ 
+ 	override function updateCurrentVolume( now : Float ) {
++		#if heapsandroid_audio_hooks
++		if (pause && currentFade != null) {
++			var f = currentFade;
++			currentFade = null;
++			super.updateCurrentVolume(now);
++			currentFade = f;
++		} else super.updateCurrentVolume(now);
++		#else
+ 		if (pause && currentFade != null) {
+ 			var f = currentFade;
+ 			currentFade = null;
+@@ -60,6 +86,7 @@
+ 			currentFade = f;
+ 		}
+ 		super.updateCurrentVolume(now);
++		#end
+ 		channelGroup.updateCurrentVolume(now);
+ 		currentVolume *= channelGroup.currentVolume * soundGroup.volume;
  

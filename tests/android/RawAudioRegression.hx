@@ -16,6 +16,12 @@ class RawAudioRegression {
     static var userPaused:Channel;
     static var stopped:Channel;
     static var finite:Channel;
+    static var fading:Channel;
+    static var createdFade:Channel;
+    static var fadeVolume:Float;
+    static var fadeCompleted:Bool;
+    static var createdFadeCompleted:Bool;
+    static var userFadeCompleted:Bool;
     static var positions:Array<Float>;
     static var deadline:Float;
     static var stage:Int;
@@ -28,6 +34,11 @@ class RawAudioRegression {
             audible = sound.play(true);
             muted = sound.play(true, 0); muted.mute = true;
             userPaused = sound.play(true); userPaused.pause = true;
+            fadeCompleted = createdFadeCompleted = userFadeCompleted = false;
+            userPaused.fadeTo(0, 0.1, function() { userFadeCompleted = true; userPaused.stop(); });
+            fading = sound.play(true); fading.mute = true;
+            fading.fadeTo(0, 1.2, function() { fadeCompleted = true; fading.stop(); });
+            createdFade = sound.play(true); createdFade.mute = true;
             check(Audio.state == Running && !audible.pause && !muted.pause, "Raw explicit play did not grant playback intent");
             check(hxd.snd.Manager.heapsAndroidBeforeUpdate != null, "Manager hook not installed");
             stage = 0; deadline = haxe.Timer.stamp() + 0.2;
@@ -48,7 +59,10 @@ class RawAudioRegression {
                     var source = @:privateAccess audible.source;
                     check(source != null && source.playing && openal.AL.getSourcei(source.handle.inst, openal.AL.SOURCE_STATE) == openal.AL.PLAYING, "Raw audible channel has no playing AL source");
                     finite = sample.play(false, 0); finite.mute = true;
+                    check(!fading.isReleased() && !fadeCompleted && !userFadeCompleted, "User pause did not freeze a fade callback");
+                    fadeVolume = fading.volume;
                     Audio.pause();
+                    createdFade.fadeTo(0, 0.1, function() { createdFadeCompleted = true; createdFade.stop(); });
                     // Toggle both directions while gated: the effective pause
                     // must stay true without erasing the user's latest request.
                     audible.pause = true; audible.pause = false;
@@ -62,12 +76,17 @@ class RawAudioRegression {
                     stage = 2; deadline = now + Math.max(audible.duration, muted.duration) + 0.2;
                 case 2:
                     frozen();
+                    check(!fadeCompleted && !userFadeCompleted && !createdFadeCompleted && !createdFade.isReleased(), "Paused fade expired a raw channel");
+                    check(Math.abs(fading.volume - fadeVolume) < 0.0001 && createdFade.volume == 1, "Pause advanced the fade clock");
                     check(Audio.resume(), "Explicit resume denied");
                     check(!audible.pause && !muted.pause && userPaused.pause, "Gate resume erased requested pause");
                     stage = 3; deadline = now + 0.15;
                 case 3:
                     check(advanced(audible, positions[0]) && advanced(muted, positions[1]), "Raw channels did not advance after explicit resume");
                     check(Math.abs(userPaused.position - positions[2]) < 0.002, "Requested pause advanced");
+                    check(createdFadeCompleted && createdFade.isReleased(), "Fade created while paused did not complete after resume");
+                    check(!fadeCompleted && fading.volume < fadeVolume - 0.01 && fading.volume > 0.1, "Existing fade restarted or expired instead of continuing");
+                    fadeVolume = fading.volume;
                     Android.shutdown();
                     stopped = sample.play(true, 0); stopped.mute = true;
                     check(stopped.pause && audible.pause && Audio.state == Paused, "SDK stop did not freeze raw channels");
@@ -76,7 +95,9 @@ class RawAudioRegression {
                     positions = [audible.position, muted.position, userPaused.position, finite.position, stopped.position];
                     stage = 5; deadline = now + sample.getData().duration + 0.2;
                 case 5:
-                    frozen(); check(!stopped.isReleased() && Math.abs(stopped.position - positions[4]) < 0.002, "Stopped raw play expired or advanced");
+                    frozen();
+                    check(!fadeCompleted && !userFadeCompleted && Math.abs(fading.volume - fadeVolume) < 0.0001, "SDK stop advanced a fade or ran its callback");
+                    check(!stopped.isReleased() && Math.abs(stopped.position - positions[4]) < 0.002, "Stopped raw play expired or advanced");
                     Android.init();
                     check(Audio.state == Paused && audible.pause && stopped.pause, "SDK restart restored intent");
                     check(Audio.resume(), "Resume after SDK restart denied");
@@ -86,7 +107,7 @@ class RawAudioRegression {
                     var wrapper = Audio.playSfx(sample);
                     check(wrapper != null, "Recovery wrapper fixture failed");
                     check(Audio.recover(), "Explicit device recreation failed");
-                    check(audible.isReleased() && muted.isReleased() && userPaused.isReleased() && stopped.isReleased() && finite.isReleased() && wrapper.isReleased(), "Recovery retained stale channels");
+                    check(audible.isReleased() && muted.isReleased() && userPaused.isReleased() && stopped.isReleased() && finite.isReleased() && fading.isReleased() && wrapper.isReleased(), "Recovery retained stale channels");
                     check(Audio.state == Paused && Audio.error == None, "Recovery granted intent or retained error");
                     var manager = @:privateAccess hxd.snd.Manager.instance;
                     check((@:privateAccess manager.channels) == null, "Recovery alone created channels");
@@ -95,7 +116,7 @@ class RawAudioRegression {
                     stage = 6;
                     AudioHealthRegression.start(sample, function(ok, detail) finish(ok, detail));
                     #else
-                    finish(true, "Raw audible/muted loops freeze beyond duration; gated user pause, SDK stop/restart and real paused recovery invalidate all old channels");
+                    finish(true, "Raw audible/muted loops freeze beyond duration; gated user pause, fade clock/callback preservation, SDK stop/restart and real paused recovery invalidate all old channels");
                     #end
             }
         } catch (error:Dynamic) { finish(false, Std.string(error)); }
@@ -110,9 +131,9 @@ class RawAudioRegression {
     }
     static function finish(ok:Bool, detail:String):Void {
         isRunning = false;
-        for (ch in [audible, muted, userPaused, finite, stopped]) if (ch != null && !ch.isReleased()) ch.stop();
+        for (ch in [audible, muted, userPaused, finite, fading, createdFade, stopped]) if (ch != null && !ch.isReleased()) ch.stop();
         var report = callback; callback = null; sample = null;
-        audible = muted = userPaused = finite = stopped = null;
+        audible = muted = userPaused = finite = fading = createdFade = stopped = null;
         if (report != null) report(ok, detail);
     }
 }
