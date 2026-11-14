@@ -37,6 +37,12 @@ class AudioHealthRegression {
                     openal.ALC.getIntegerv(driver.device, 0x7fffffff, 1, haxe.io.Bytes.alloc(4));
                     Audio.poll();
                     check(Audio.state == Unavailable && Audio.error == BackendFailure && channel.pause, "Late actual ALC error did not freeze the gate");
+                    check(Audio.playSfx(sample) == null && Audio.playMusic(sample) == null, "Wrapper fabricated playback after an output failure");
+                    var rawFailed = false;
+                    try sample.play(false) catch (error:Dynamic) rawFailed = Std.string(error).indexOf("recover and replay") >= 0;
+                    check(rawFailed, "Raw play hid unavailable output");
+                    var count = 0; for (active in manager.getAll(sample)) ++count;
+                    check(count == 1 && !channel.isReleased(), "Unavailable play leaked a new channel or disposed the recoverable old channel");
                     stage = 1; deadline = haxe.Timer.stamp() + channel.duration + 0.2;
                 case 1:
                     check(!channel.isReleased() && channel.pause && Math.abs(channel.position - position) < 0.002, "Failed output consumed completed buffers and expired or moved a paused channel");

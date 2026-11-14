@@ -94,7 +94,7 @@ class Audio {
     }
     public static function init():Bool {
         installHooks();
-        if (initialized) return AudioNative.getState() != Unavailable;
+        if (initialized) { poll(); return AudioNative.getState() != Unavailable; }
         var candidate:Manager = null;
         try {
             candidate = Manager.get();
@@ -190,12 +190,12 @@ class Audio {
         // intent; subsequent Running plays avoid repeated AudioManager requests.
         if (wrapperDepth == 0 && eligible()) {
             if (!initialized || AudioNative.getState() == Unavailable) {
-                channel.stop(); channels.remove(channel);
+                channel.stop(); channels.remove(channel); poll();
                 throw "Audio unavailable; recover and replay";
             }
             resume();
             if (AudioNative.getState() == Unavailable) {
-                channel.stop(); channels.remove(channel);
+                channel.stop(); channels.remove(channel); poll();
                 throw "Audio unavailable; recover and replay";
             }
         }
@@ -221,7 +221,9 @@ class Audio {
         --wrapperDepth;
         channel.mute = sfxMuted;
         sfx.push(new OwnedChannel(channel, gain));
-        poll(); return channel;
+        poll();
+        if (AudioNative.getState() == Unavailable) { channel.stop(); poll(); return null; }
+        return channel;
     }
     public static function playMusic(sound:Sound, loop:Bool = true):Null<Channel> {
         if (sound == null || !resume()) return null;
@@ -233,7 +235,9 @@ class Audio {
         --wrapperDepth;
         channel.mute = musicMuted;
         music = new OwnedChannel(channel, 1);
-        poll(); return channel;
+        poll();
+        if (AudioNative.getState() == Unavailable) { channel.stop(); if (music != null && music.channel == channel) music = null; poll(); return null; }
+        return channel;
     }
     public static function stopMusic():Void {
         if (music != null) music.channel.stop();
