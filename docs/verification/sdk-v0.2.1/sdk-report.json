@@ -1,0 +1,19 @@
+{
+  "application": {
+    "package": "io.heaps.android.proof",
+    "versionCode": 3,
+    "versionName": "0.2.1",
+    "activity": "io.heaps.android.HeapsActivity",
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ],
+    "minSdk": 24,
+    "label": "Heaps Android Proof"
+  },
+  "audioChecks": "AUDIO_TEST_PASS Wrapper and Raw audible/muted loops freeze beyond duration; gated user pause, fade clock/callback preservation, SDK stop/restart and real paused recovery invalidate all old channels",
+  "audioOnly": false,
+  "stressChecks": "RELIABILITY_TEST_PASS 10 framework cycles, SDK restart, raw/virtual/user pause and fresh paused recovery",
+  "hardwareAbi": "x86_64"
+}

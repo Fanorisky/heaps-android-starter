@@ -32,3 +32,7 @@ CI APK SHA-256: `b02c0633714397ffb30af329b7cbf1c997888a1b519c2e69d302f70b90b1ae3
 ## Reusable SDK milestone
 
 Current host/audio/platform evidence is in [sdk-v0.2.0](sdk-v0.2.0/README.md). The earlier sections describe the initial Neon Drift-only proof.
+
+## Reliability hardening
+
+See [sdk-v0.2.1](sdk-v0.2.1/README.md) for all-channel audio, SDK session, failure recovery and assertion-driven stress evidence.
