@@ -26,6 +26,8 @@ public:
     void abandonFocus(int generation);
     void setIntent(bool intent);
     int state();
+    // Callback-safe cached observation; never probes a device or context.
+    int peekState();
     int error();
     int checkHealth();
 private:

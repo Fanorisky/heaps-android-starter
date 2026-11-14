@@ -58,6 +58,7 @@ extern "C" void audio_set_focus(int generation, int focused) { gate.setFocus(gen
 extern "C" void audio_abandon_focus(int generation) { gate.abandonFocus(generation); }
 extern "C" void audio_set_intent(int intent) { gate.setIntent(intent != 0); }
 extern "C" int audio_get_state() { return gate.state(); }
+extern "C" int audio_peek_state() { return gate.peekState(); }
 extern "C" int audio_get_error() { return gate.error(); }
 extern "C" int audio_check_health() { return gate.checkHealth(); }
 

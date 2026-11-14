@@ -16,6 +16,7 @@ struct Device {
     bool supported = true;
     bool resumeSucceeds = true;
     int health = 0;
+    int healthChecks = 0;
 };
 static bool prepare(void *p) { return static_cast<Device *>(p)->supported; }
 static void pauseDevice(void *p) {
@@ -28,7 +29,7 @@ static bool resumeDevice(void *p) {
     return d.resumeSucceeds;
 }
 static int checkHealth(void *p) {
-    auto &d = *static_cast<Device *>(p); assert(d.alive); return d.health;
+    auto &d = *static_cast<Device *>(p); assert(d.alive); ++d.healthChecks; return d.health;
 }
 static AudioGateController::Operations ops = {prepare, pauseDevice, resumeDevice, checkHealth};
 static void activate(AudioGateController &gate) {
@@ -218,9 +219,46 @@ static void unregisterWaitsForHealthProbe() {
     assert(returned && gate.state() == 0 && gate.error() == 1);
     assert(gate.checkHealth() == 1);
 }
+static void cachedPeekNeverProbesHealth() {
+    AudioGateController gate(ops); Device a; activate(gate);
+    assert(gate.peekState() == 0);
+    gate.registerDevice(&a); grant(gate, 1);
+    assert(gate.peekState() == 2 && a.healthChecks == 0);
+    a.health = 3; // Callback diagnostics report only the already-known state.
+    assert(gate.peekState() == 2 && a.healthChecks == 0);
+    gate.setForeground(false);
+    assert(gate.peekState() == 1 && !a.running && a.healthChecks == 0);
+    gate.setForeground(true); gate.setIntent(true);
+    gate.setWindowFocus(false);
+    assert(gate.peekState() == 1 && a.healthChecks == 0);
+    gate.setWindowFocus(true); gate.setIntent(true); gate.routeChanged();
+    assert(gate.peekState() == 1 && a.healthChecks == 0);
+    assert(gate.state() == 0 && a.healthChecks == 1);
+    assert(gate.peekState() == 0 && a.healthChecks == 1);
+    gate.unregisterDevice(); a.alive = false;
+    assert(gate.peekState() == 0 && a.healthChecks == 1);
+}
+static void cachedPeekRacesLossAndUnregister() {
+    AudioGateController gate(ops); Device a; activate(gate);
+    gate.registerDevice(&a); grant(gate, 1);
+    std::atomic<bool> enteredPeek{false}, stopped{false};
+    std::thread observer([&] {
+        enteredPeek = true;
+        while (!stopped) {
+            const int value = gate.peekState();
+            assert(value >= 0 && value <= 2);
+        }
+        for (int i = 0; i < 1000; ++i) assert(gate.peekState() == 0);
+    });
+    while (!enteredPeek) std::this_thread::yield();
+    gate.setForeground(false); gate.unregisterDevice();
+    a.alive = false; stopped = true; observer.join();
+    assert(gate.peekState() == 0 && a.healthChecks == 0);
+}
 int main() {
     registration(); lossRequiresExplicitResume(); failedResumeStaysPausedAndClearsIntent();
     unregisterWaitsForDeviceOperation();
     independentInputsAndRouteLoss(); lateHealthFailureLatchesUnavailable(); unregisterWaitsForHealthProbe();
+    cachedPeekNeverProbesHealth(); cachedPeekRacesLossAndUnregister();
     std::cout << "AUDIO_GATE_TEST_PASS\n";
 }

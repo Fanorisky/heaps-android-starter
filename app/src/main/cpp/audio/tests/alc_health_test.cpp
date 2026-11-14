@@ -20,8 +20,11 @@ int main() {
     // The real ALC operation, not a substituted controller, sets an error.
     ALCint ignored = 0;
     alcGetIntegerv(device, static_cast<ALCenum>(0x7fffffff), 1, &ignored);
+    // Callback observation must leave the pending real ALC error untouched.
+    assert(audio_peek_state() == AUDIO_GATE_RUNNING);
     assert(audio_get_state() == AUDIO_GATE_UNREGISTERED);
     assert(audio_get_error() == AUDIO_ERROR_BACKEND_FAILURE);
+    assert(audio_peek_state() == AUDIO_GATE_UNREGISTERED);
     assert(audio_check_health() == AUDIO_ERROR_BACKEND_FAILURE);
     audio_set_intent(1); audio_set_foreground(1);
     assert(audio_get_state() == AUDIO_GATE_UNREGISTERED); // consumed error remains latched
@@ -31,6 +34,6 @@ int main() {
     assert(audio_register(device) == 1);
     assert(audio_get_state() == AUDIO_GATE_PAUSED && audio_get_error() == AUDIO_ERROR_NONE);
     audio_unregister_device(device); alcMakeContextCurrent(nullptr); alcDestroyContext(context); assert(alcCloseDevice(device));
-    assert(audio_get_state() == AUDIO_GATE_UNREGISTERED);
+    assert(audio_get_state() == AUDIO_GATE_UNREGISTERED && audio_peek_state() == AUDIO_GATE_UNREGISTERED);
     std::cout << "AUDIO_ALC_NULL_BACKEND_TEST_PASS (hardware unverified)\n";
 }

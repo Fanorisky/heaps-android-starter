@@ -95,6 +95,10 @@ int AudioGateController::state() {
     healthLocked();
     return !device || lastError != AUDIO_ERROR_NONE ? AUDIO_GATE_UNREGISTERED : running ? AUDIO_GATE_RUNNING : AUDIO_GATE_PAUSED;
 }
+int AudioGateController::peekState() {
+    std::lock_guard<std::mutex> lock(lifetimeMutex);
+    return !device || lastError != AUDIO_ERROR_NONE ? AUDIO_GATE_UNREGISTERED : running ? AUDIO_GATE_RUNNING : AUDIO_GATE_PAUSED;
+}
 int AudioGateController::error() {
     std::lock_guard<std::mutex> lock(lifetimeMutex); return healthLocked();
 }
