@@ -1,0 +1,18 @@
+# Heaps Android SDK reliability hardening
+
+The user explicitly requested fixing all fragility findings from the current v0.2.0 audit. This is reliability work, preserving the established game, platform scope, native stack and stable proof signing identity.
+
+## Required behavior
+- Android.init/shutdown/init must work in the same live Activity. Distinguish reversible SDK stop from terminal Activity destruction; reject stale asynchronous Java work/focus/sensor callbacks. Cleanup is repeatable and startup snapshots reflect actual foreground/window focus. A missing or unloadable library uses SDL's error screen without native service calls causing UnsatisfiedLinkError.
+- Standard raw Heaps Sound.play channels receive the same pause/time protection as Audio wrapper channels after Android initialization. Freeze audible and muted/virtual loops and preserve user pause; channels must not expire or skip ahead during background, window interruption, manual audio pause, or SDK lifecycle transitions. Keep app's explicit playback-intent/focus contract; no automatic sound on focus/background return.
+- Detect native audio health changes after a successful resume. Failed/disconnected output must stop reporting Running, freeze channels and surface failure. Add explicit Audio.recover():Bool with genuine device/context recreation and clear channel invalidation semantics; do not pretend native handles remain valid. The app must explicitly restart sounds after successful recovery, and recovery alone must not grant playback intent. No unbounded restart loop.
+- Exercise repeated lifecycle transitions and real channels, injected operation failures/stale callbacks, library-load failure, managed/raw playback, user pause, preferences and observed display/sensor/IME/audio state. Replace screenshot-only claims with assertions where measurable. Keep deterministic tests separate from real Android/audio hardware claims.
+- Native device routing: observe Android output-device changes safely with no Haxe callback-thread work, pause/invalidate intent and expose route changes; recover or resume explicitly. Test simulated route/focus callbacks and real framework interactions where available. Physical Bluetooth/headset output/latency/battery and multiple-device coverage cannot be fabricated; provide a concrete physical-device checklist/evidence matrix.
+- Keep pinned reproducible source versions. Document every patch's target revision, reason, owning tests, upgrade/recovery process and upstream status (unknown/local if not submitted). Verify patch application on fresh extraction, already-patched extraction and published-old checkout, with explicit failure on incompatible revisions. No broad dependency upgrade or exception disabling.
+- Maintain Android24/GLES3 ARM32/ARM64/x86_64, existing62 game assertions, private data format, same applicationId and dedicated test cert. Build the next signed proof APK via Actions, check downloaded artifact and publish v0.2.1 after review/gates.
+
+## Architecture constraints
+Root owns canonical plan/contracts/native gate header/integration/version/signing/CI/release. Delegated platform and audio fixes have disjoint files and report test/ABI changes. New engine hooks should be narrow and conditional for the heapsandroid integration, preserve unchanged WebGL/desktop behavior, and remain idempotent across Manager/SDK recreation. Hardware absent or backend failing is a normal unavailable result, not successful virtual playback.
+
+## Acceptance limits
+Claim only measured local/CI/emulator behavior. Document remaining physical-device tasks explicitly. Do not call the SDK production-ready merely because scripted regressions pass.
