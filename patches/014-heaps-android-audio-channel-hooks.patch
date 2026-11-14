@@ -1,0 +1,75 @@
+--- a/heaps/hxd/snd/Manager.hx
++++ b/heaps/hxd/snd/Manager.hx
+@@ -58,6 +58,15 @@
+ }
+ 
+ class Manager {
++	#if heapsandroid_audio_hooks
++	// SDK hooks remain installed across Manager and SDK recreation. Other
++	// targets keep their original behavior when the integration define is off.
++	public static var heapsAndroidAfterCreate : Manager -> Void;
++	public static var heapsAndroidAfterPlay : Channel -> Void;
++	public static var heapsAndroidBeforeUpdate : Void -> Void;
++	public static var heapsAndroidBeforeDispose : Manager -> Void;
++	public static var heapsAndroidFilterPause : Channel -> Bool -> Bool;
++	#end
+ 	// Automatically set the channel to streaming mode if its duration exceed this value.
+ 	public static var STREAM_DURATION            = 5.;
+ 	public static var STREAM_BUFFER_SAMPLE_COUNT = 44100;
+@@ -163,6 +172,9 @@
+ 			instance = new Manager();
+ 			instance.updateEvent = haxe.MainLoop.add(instance.update);
+ 			instance.updateEvent.isBlocking = false;
++			#if heapsandroid_audio_hooks
++			if (heapsAndroidAfterCreate != null) heapsAndroidAfterCreate(instance);
++			#end
+ 		}
+ 		return instance;
+ 	}
+@@ -220,6 +232,9 @@
+ 	}
+ 
+ 	public function dispose() {
++		#if heapsandroid_audio_hooks
++		if (heapsAndroidBeforeDispose != null) heapsAndroidBeforeDispose(this);
++		#end
+ 		stopAll();
+ 
+ 		if (driver != null) {
+@@ -259,6 +274,9 @@
+ 		c.lastStamp    = haxe.Timer.stamp();
+ 
+ 		channels = c;
++		#if heapsandroid_audio_hooks
++		if (heapsAndroidAfterPlay != null) heapsAndroidAfterPlay(c);
++		#end
+ 		return c;
+ 	}
+ 
+@@ -296,6 +314,9 @@
+ 	}
+ 
+ 	public function update() {
++		#if heapsandroid_audio_hooks
++		if (heapsAndroidBeforeUpdate != null) heapsAndroidBeforeUpdate();
++		#end
+ 		if( timeOffset != 0 ) {
+ 			var c = channels;
+ 			while( c != null ) {
+--- a/heaps/hxd/snd/Channel.hx
++++ b/heaps/hxd/snd/Channel.hx
+@@ -48,7 +48,14 @@
+ 	}
+ 
+ 	function set_pause(v : Bool) {
++		#if heapsandroid_audio_hooks
++		if (Manager.heapsAndroidFilterPause != null) v = Manager.heapsAndroidFilterPause(this, v);
++		// Reset wall time once when effectively unpausing; a gate assignment
++		// must not reset it every update or overwrite user pause intent.
++		if (!v && pause) lastStamp = haxe.Timer.stamp();
++		#else
+ 		if (!v) lastStamp = haxe.Timer.stamp();
++		#end
+ 		return pause = v;
+ 	}
+ 

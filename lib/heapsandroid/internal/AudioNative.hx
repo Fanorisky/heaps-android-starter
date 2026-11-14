@@ -7,4 +7,6 @@ extern class AudioNative {
     public static function unregisterDevice():Void;
     public static function setIntent(intent:Bool):Void;
     public static function getState():Int;
+    public static function getError():Int;
+    public static function checkHealth():Int;
 }

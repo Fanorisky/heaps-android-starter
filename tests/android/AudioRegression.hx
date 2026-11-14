@@ -91,6 +91,7 @@ class AudioRegression {
     }
     public static function update():Void {
         if (!isRunning) return;
+        if (stage == 6) { RawAudioRegression.update(); return; }
         try {
             Audio.poll();
             var now = haxe.Timer.stamp();
@@ -135,7 +136,8 @@ class AudioRegression {
                     }
                 case 4:
                     if (Math.abs(channel.position - position) > 0.002) { finish(false, "User pause did not preserve position"); return; }
-                    finish(true, "Audible OpenAL source and muted virtual loop: progress, pause, preserved position, explicit resume, user pause");
+                    stage = 6;
+                    RawAudioRegression.start(sound, function(ok, detail) finish(ok, "Wrapper and " + detail));
             }
         } catch (error:Dynamic) { finish(false, Std.string(error)); }
     }
