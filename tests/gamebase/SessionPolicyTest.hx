@@ -41,6 +41,16 @@ class SessionPolicyTest {
         session.setScreenshotMode(true);
         session.setScreenshotMode(false);
         check(session.paused, 'Screenshot mode cannot erase user pause');
+        session.resume();
+        session.setModalOpen(true);
+        session.reconcile(true, true);
+        check(session.paused && !session.resume(), 'Modal pause survives reconciliation and explicit resume');
+        session.setModalOpen(false);
+        check(!session.paused, 'Closing modal restores uninterrupted game');
+        session.pause();
+        session.setModalOpen(true);
+        session.setModalOpen(false);
+        check(session.paused, 'Closing modal preserves user pause');
         Sys.println('GAMEBASE_SESSION_TEST_PASS');
     }
 }

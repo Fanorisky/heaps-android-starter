@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import time
+import struct
 from apk_info import apk_info
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -33,11 +34,21 @@ def wait_for(pattern,seconds=20):
 def capture(name):
  (OUT/(name+'.png')).write_bytes(adb('exec-out','screencap','-p',binary=True))
 def launch():return adb('shell','am','start','-n',package+'/'+info['activity'])
-def tap(name):
+def frame_size():
+ png=adb('exec-out','screencap','-p',binary=True)
+ return struct.unpack('>II',png[16:24])
+def point(name):
  x,y=controls[name]
- width,height=map(int,re.findall(r'(\d+)x(\d+)',adb('shell','wm','size'))[-1])
- scale=min(width/360,height/640)
- adb('shell','input','tap',str(round((width-360*scale)/2+x*scale)),str(round((height-640*scale)/2+y*scale)))
+ width,height=frame_size()
+ logical=(640,360) if name in ('titleFeatures','gamePauseResume','gameLeft','gameRight','gameJump','gameRestart') else (360,640)
+ scale=min(width/logical[0],height/logical[1])
+ return round((width-logical[0]*scale)/2+x*scale),round((height-logical[1]*scale)/2+y*scale)
+def tap(name):
+ x,y=point(name)
+ adb('shell','input','tap',str(x),str(y))
+def hold(name,duration_ms=600):
+ x,y=point(name)
+ adb('shell','input','swipe',str(x),str(y),str(x),str(y),str(duration_ms))
 try:
  adb('wait-for-device')
  boot_deadline=time.monotonic()+120
@@ -47,7 +58,26 @@ try:
  adb('install','-r',str(Path(args.apk).resolve()))
  adb('shell','am','force-stop',package);adb('logcat','-c')
  adb('shell','input','keyevent','KEYCODE_WAKEUP');launch()
- wait_for(r'GameBase: ready');time.sleep(1);capture('gamebase-foundation')
+ wait_for(r'GameBase: ready');time.sleep(1)
+ width,height=frame_size();assert width>height,'Expected landscape gameplay'
+ capture('gamebase-playable')
+ if not args.audio_only:
+  hold('gameRight')
+  movement=re.findall(r'GameBase: player move=([-0-9.]+) x=([-0-9.]+) y=([-0-9.]+)',logs())
+  assert any(float(m[0])==1 for m in movement),'Touch right did not reach player'
+  stopped=[m for m in movement if float(m[0])==0]
+  started=[m for m in movement if float(m[0])==1]
+  assert stopped and float(stopped[-1][1])>float(started[-1][1])+1,'Player did not move right'
+  hold('gameLeft')
+  movement=re.findall(r'GameBase: player move=([-0-9.]+) x=([-0-9.]+) y=([-0-9.]+)',logs())
+  started=[m for m in movement if float(m[0])==-1];stopped=[m for m in movement if float(m[0])==0]
+  assert started and stopped and float(stopped[-1][1])<float(started[-1][1])-1,'Player did not move left'
+  time.sleep(.5);tap('gameJump');wait_for('GameBase: player jump')
+  capture('gamebase-jump');time.sleep(.6)
+  before_restart=logs().count('GameBase: ready');tap('gameRestart')
+  deadline=time.monotonic()+10
+  while logs().count('GameBase: ready')<=before_restart and time.monotonic()<deadline:time.sleep(.3)
+  assert logs().count('GameBase: ready')>before_restart,'Restart failed'
  tap('titleFeatures');time.sleep(.5);capture('sdk-features')
  tap('audioChecks')
  result=wait_for(r'AUDIO_TEST_(?:PASS|FAIL)[^\n]+',seconds=30)
@@ -91,7 +121,7 @@ try:
   assert adb('shell','run-as',package,'cat','files/heaps-android-settings.json')==prefs,'Preferences changed after process restart'
  log=logs();assert 'Fatal signal' not in log and 'FATAL EXCEPTION' not in log,log
  (OUT/'sdk-logcat.txt').write_text(log)
- (OUT/'sdk-report.json').write_text(json.dumps({'application':info,'audioChecks':result,'audioOnly':args.audio_only,'stressChecks':None if args.audio_only else stress,'hardwareAbi':adb('shell','getprop','ro.product.cpu.abi').strip()},indent=2)+'\n')
+ (OUT/'sdk-report.json').write_text(json.dumps({'application':info,'audioChecks':result,'audioOnly':args.audio_only,'stressChecks':None if args.audio_only else stress,'gameplayChecks':None if args.audio_only else 'Landscape, touch left/right, jump, restart, lifecycle and explicit resume','hardwareAbi':adb('shell','getprop','ro.product.cpu.abi').strip()},indent=2)+'\n')
  print('PASS Android proof: '+result)
 except Exception:
  (OUT/'sdk-failure-logcat.txt').write_text(logs());capture('sdk-failure');raise

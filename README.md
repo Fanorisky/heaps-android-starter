@@ -1,14 +1,16 @@
 # GameBase Android
 
-An empty **[deepnight/gameBase](https://github.com/deepnight/gameBase)** foundation on a native **Heaps.io** Android host. GameBase provides the App/Game/process/entity/camera/UI structure, CastleDB constants, LDtk world and Aseprite assets. The reusable Android APIs cover audio, keyboard, vibration, sensors, display, device information and private storage.
+A playable **[deepnight/gameBase](https://github.com/deepnight/gameBase)** platformer sample on a native **Heaps.io** Android host. GameBase provides the App/Game/process/entity/camera/UI structure, CastleDB constants, LDtk world and Aseprite assets. The reusable Android APIs cover audio, keyboard, vibration, sensors, display, device information and private storage.
 
 Haxe → HashLink/C → Android NDK → APK. Android7+ (API24), GLES3, ARM32/ARM64/x86_64. The sample works offline.
 
-## Build the foundation APK
+## Play and build
 
-The app starts an empty GameBase world. Open **Android Features** to test music/SFX, volumes/mutes, keyboard input, haptics, optional sensors and display controls. **CHECKS** runs a real Heaps/OpenAL channel regression. Gameplay remains paused after background/focus loss until **RESUME GAME** is pressed.
+The app starts GameBase's original platformer level and green player in **landscape**. Hold **LEFT/RIGHT** to move and tap **JUMP**; movement and jump support separate fingers. Keyboard/gamepad controls remain available. **RESTART** resets the sample; **PAUSE/RESUME** controls gameplay. After background/focus loss, press **RESUME** to continue.
 
-The app retains `io.heaps.android.proof` and the dedicated proof certificate for signed updates. Local debug builds have a different certificate. Existing v0.2.x [Releases](https://github.com/Fanorisky/heaps-android-starter/releases) contain the previous application; build this revision or download its Actions artifact for GameBase. These are development APKs; store/production signing is a separate user-owned process.
+**FEATURES** opens the separate Android API proof screen and pauses gameplay. Its music/SFX, keyboard, haptics, sensors and display controls are secondary to the game. **CHECKS** runs a real Heaps/OpenAL channel regression.
+
+The app retains `io.heaps.android.proof` and the dedicated proof certificate for signed updates. Local debug builds have a different certificate. Existing v0.2.x [Releases](https://github.com/Fanorisky/heaps-android-starter/releases) contain the previous application; v0.3.0 is the empty starter. Build v0.3.1 or download its Actions artifact for the playable landscape sample. These are development APKs; store/production signing is a separate user-owned process.
 
 ## Clone, configure, build
 
@@ -33,9 +35,9 @@ Output: `dist/heaps-android-proof.apk`. Once source and Gradle dependencies are 
 
 ## Build your game
 
-`src/game/Boot.hx` prepares Android before window creation and drives `dn.Process.updateAll`. `App.hx` initializes resources and starts `new Game()`. Add entities in `Game.startLevel`, extend `Entity`, and edit the empty LDtk world in `res/levels/sampleWorld.ldtk`. GameBase's platformer player and the previous arcade game have been removed.
+`src/game/Boot.hx` prepares Android before window creation and drives `dn.Process.updateAll`. `App.hx` initializes resources and starts `sample.SampleGame`. `src/game/sample/SamplePlayer.hx` is the original GameBase player adapted for Android touch controls. Add entities in `Game.startLevel`, extend `Entity`, and edit the original LDtk level in `res/levels/sampleWorld.ldtk`. The previous Neon Drift arcade game remains removed.
 
-Fonts, the sprite atlas, constants and levels live in `res/`. `src/game/assets/` contains the typed CastleDB/LDtk/Aseprite accessors. `src/demo/` is the separate Android proof UI; it scales independently of the game viewport and locks game input while open.
+Fonts, the sprite atlas, constants and levels live in `res/`. `src/game/assets/` contains the typed CastleDB/LDtk/Aseprite accessors. `src/demo/` contains touch controls and the separate Android proof UI; it scales independently of the game viewport and locks game input while open.
 
 GameBase master is pinned at `a7af1d70dbbf62d7fc09cb05431ced606e0ed809`. The repository uses its existing patched Heaps/HashLink alongside pinned GameBase libraries. Use `scripts/setup-toolchain.sh`; upstream's `setup.hxml` installs floating revisions and replaces those mappings. Import details and Android adaptations are in [third_party/gamebase.md](third_party/gamebase.md).
 

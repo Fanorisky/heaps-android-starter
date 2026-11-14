@@ -1,6 +1,6 @@
 # Verification — 2026-11-13
 
-The records below describe the previous application. GameBase migration evidence is recorded separately in [gamebase-v0.3.0](gamebase-v0.3.0/README.md); historical gameplay screenshots and reports do not verify the new foundation.
+The records below describe the previous application. GameBase migration evidence is recorded in [gamebase-v0.3.0](gamebase-v0.3.0/README.md). Playable Android landscape sample evidence is in [gamebase-v0.3.1](gamebase-v0.3.1/README.md); historical gameplay screenshots and reports do not verify the new foundation.
 
 ![Native Android gameplay](overview.png)
 

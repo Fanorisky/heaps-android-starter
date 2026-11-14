@@ -17,7 +17,7 @@
 -main Boot
 -D android
 -D heapsandroid_audio_hooks
--D windowSize=360x640
+-D windowSize=1280x720
 -D hl-ver=1.15.0
 -D no-compilation
 -dce full

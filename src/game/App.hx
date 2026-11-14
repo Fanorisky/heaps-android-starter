@@ -5,6 +5,7 @@
 class App extends dn.Process {
 	public static var ME : App;
 	public final gameSession = new demo.GameSessionPolicy();
+	public final touchControls = new demo.TouchControls();
 	var lastGamePause:Null<Bool>;
 	#if android
 	var featuresOverlay:demo.FeaturesOverlay;
@@ -127,7 +128,7 @@ class App extends dn.Process {
 		if( Game.exists() ) {
 			// Kill previous game instance first
 			Game.ME.destroy();
-			dn.Process.updateAll(1); // ensure all garbage collection is done
+			dn.Process.forceProcessGarbageCollection();
 			_createGameInstance();
 			hxd.Timer.skip();
 		}
@@ -141,7 +142,8 @@ class App extends dn.Process {
 	}
 
 	final function _createGameInstance() {
-		new Game();
+		touchControls.clear();
+		new sample.SampleGame();
 		applyGamePause();
 		Sys.println('GameBase: ready');
 	}
@@ -196,6 +198,8 @@ class App extends dn.Process {
 	}
 
 	public function applyGamePause() {
+		gameSession.setModalOpen(ui.Window.hasAnyModal());
+		if (gameSession.paused) touchControls.clear();
 		if (Game.exists() && lastGamePause != gameSession.paused) {
 			lastGamePause = gameSession.paused;
 			Sys.println('GameBase: ' + (gameSession.paused ? 'paused' : 'running'));

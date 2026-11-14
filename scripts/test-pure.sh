@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 haxe test.hxml
+haxe -cp src -cp tests/gamebase -main TouchControlsTest --interp
 haxe platform-test.hxml
 haxe -cp lib -cp tests/audio -main AudioPolicyTest --interp
 haxe -cp lib -cp tests/storage -main StorageTest --interp

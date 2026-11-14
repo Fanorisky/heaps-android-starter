@@ -5,8 +5,8 @@
   ],
   "centers": {
     "titleFeatures": [
-      180,
-      556
+      575,
+      27
     ],
     "musicPlay": [
       48,
@@ -121,8 +121,24 @@
       583
     ],
     "gamePauseResume": [
-      180,
-      605
+      67,
+      27
+    ],
+    "gameRight": [
+      142,
+      310
+    ],
+    "gameLeft": [
+      54,
+      310
+    ],
+    "gameJump": [
+      576,
+      310
+    ],
+    "gameRestart": [
+      171,
+      27
     ]
   }
 }

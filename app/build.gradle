@@ -3,9 +3,9 @@ plugins { id 'com.android.application' }
 def setting = { String key, String fallback -> project.hasProperty(key) ? project.property(key).toString() : fallback }
 def appId = setting('app.application_id', 'io.heaps.android.proof')
 def appName = setting('app.name', 'GameBase Android')
-def appVersion = setting('app.version_name', '0.3.0')
-def versionNumber = setting('app.version_code', '4')
-def orientation = setting('app.orientation', 'portrait')
+def appVersion = setting('app.version_name', '0.3.1')
+def versionNumber = setting('app.version_code', '5')
+def orientation = setting('app.orientation', 'landscape')
 def booleanSetting = { String key, String fallback ->
     def value = setting(key, fallback)
     if (!(value in ['true', 'false'])) throw new GradleException("${key} must be true or false")

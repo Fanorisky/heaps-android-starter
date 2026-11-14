@@ -2,15 +2,16 @@
 
 GameBase source/resources originate from deepnight/gameBase master, revision `a7af1d70dbbf62d7fc09cb05431ced606e0ed809`, under the MIT license in `licenses/gamebase/LICENSE`. The checksum-pinned source archive is recorded in `dependencies.lock.json`.
 
-`src/game/` is the editable application foundation. The import retains Boot, App, Game, Entity, Level, Camera, Fx, asset builders, UI and tools. The upstream SampleGame/SamplePlayer classes are omitted. The LDtk world retains its generated identifiers and empty collision/entity layers so new game content can be added without an arcade or platformer demo.
+`src/game/` is the editable application foundation. The import retains Boot, App, Game, Entity, Level, Camera, Fx, asset builders, UI and tools. The upstream SampleGame/SamplePlayer classes and original LDtk collision/entity layers are included. SamplePlayer accepts Android touch movement/jump in addition to its original keyboard/gamepad input.
 
 Android adaptations:
 
 - Boot prepares/initializes the Android host and shuts it down when disposed.
-- App starts an empty Game, uses embedded resources for Android, initializes checked SDK audio and writes fatal crash logs to private storage rather than using desktop paths/dialogs.
+- App starts the original SampleGame, uses embedded resources for Android, initializes checked SDK audio and writes fatal crash logs to private storage rather than using desktop paths/dialogs.
 - The process loop reconciles SDK foreground/focus before gameplay. A lifecycle loss latches a gameplay pause; focus gain does not undo it. Features pause gameplay independently and preserve existing user/lifecycle pauses.
-- `src/demo/FeaturesOverlay.hx` owns the touch-accessible proof UI independently of GameBase scene scaling. The proof screen's WAV fixtures live in `res/android/`.
+- `src/demo/FeaturesOverlay.hx` owns landscape touch movement/jump, pause/restart, and a secondary proof UI independently of GameBase scene scaling. The proof screen's WAV fixtures live in `res/android/`.
 - Controller resources and event/lifecycle subscriptions are disposed with App. Atlas time is updated once per Boot frame.
+- Touch input respects controller/console locks; modal windows participate in pause ownership and cannot undo a user/lifecycle pause when closed.
 - Screenshot mode participates in pause ownership; atlas timing follows Game's slow motion; Game disposes its controller access on restart.
 - `ui/component/ControlsHelp.hx` uses its `label` argument; upstream referred to an undefined `txt`. The HLC build includes retained UI/entity modules so dormant framework helpers are type-checked too.
 - Debug Console uses deepnightLibs' current `AbstractEnumValue<Int>` type instead of an obsolete anonymous-object type, so `haxe game.hxml -debug` compiles.

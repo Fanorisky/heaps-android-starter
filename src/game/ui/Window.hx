@@ -111,8 +111,7 @@ class Window extends dn.Process {
 		ca.dispose();
 		ca = null;
 
-		if( !hasAnyModal() )
-			Game.ME.resume();
+		if (App.exists()) App.ME.applyGamePause();
 
 		emitResizeAtEndOfFrame();
 	}
@@ -127,8 +126,7 @@ class Window extends dn.Process {
 
 		isModal = true;
 
-		if( getModalIndex()==0 )
-			Game.ME.pause();
+		App.ME.applyGamePause();
 
 		mask = new h2d.Flow(root);
 		mask.backgroundTile = h2d.Tile.fromColor(0x0, 1, 1, 0.8);

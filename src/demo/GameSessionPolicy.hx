@@ -4,13 +4,14 @@ package demo;
 class GameSessionPolicy {
     public var featuresOpen(default, null) = false;
     var screenshotMode = false;
+    var modalOpen = false;
     public var paused(get, never):Bool;
     var userPaused = false;
     var foreground = true;
     var focused = true;
 
     public function new() {}
-    function get_paused():Bool return userPaused || featuresOpen || screenshotMode || !foreground || !focused;
+    function get_paused():Bool return userPaused || featuresOpen || screenshotMode || modalOpen || !foreground || !focused;
     public function reconcile(foreground:Bool, focused:Bool):Void {
         this.foreground = foreground;
         this.focused = focused;
@@ -18,10 +19,11 @@ class GameSessionPolicy {
     }
     public function pause():Void userPaused = true;
     public function resume():Bool {
-        if (!foreground || !focused || featuresOpen || screenshotMode) return false;
+        if (!foreground || !focused || featuresOpen || screenshotMode || modalOpen) return false;
         userPaused = false;
         return true;
     }
     public function setFeaturesOpen(open:Bool):Void featuresOpen = open;
     public function setScreenshotMode(enabled:Bool):Void screenshotMode = enabled;
+    public function setModalOpen(open:Bool):Void modalOpen = open;
 }
