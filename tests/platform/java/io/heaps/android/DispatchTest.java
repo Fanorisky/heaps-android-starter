@@ -48,6 +48,27 @@ public final class DispatchTest {
         check(sessions.start() == null && !sessions.run(third, () -> events.add("destroyed")), "destroy was reversible");
         ready[0] = false; sessions.foreground(false, s -> calls[0]++); sessions.windowFocus(false, s -> calls[0]++);
         check(calls[0] == 1, "broken library lifecycle called JNI");
+        // Stopped-session cleanup releases window effects; old cleanup cannot clear a new session.
+        ready[0] = true;
+        SessionDispatch windows = new SessionDispatch(nativeDispatch, new SessionDispatch.Publication() {
+            public void start(long epoch, boolean fg, boolean focus) {}
+            public void stop(long epoch) {}
+        });
+        int[] windowFlags = {0};
+        SessionDispatch.Session oldWindow = windows.start();
+        windows.run(oldWindow, () -> windowFlags[0] = 3); // fullscreen + keep-awake
+        windows.stop();
+        check(windows.cleanup(oldWindow, () -> windowFlags[0] = 0), "stopped session did not release window flags");
+        check(windowFlags[0] == 0, "stopped session retained fullscreen/keep-awake");
+        SessionDispatch.Session newWindow = windows.start();
+        windows.run(newWindow, () -> windowFlags[0] = 3);
+        check(!windows.cleanup(oldWindow, () -> windowFlags[0] = 0), "old cleanup mutated active new window");
+        check(windowFlags[0] == 3, "old cleanup cleared new keep-awake");
+        windows.stop();
+        check(!windows.cleanup(oldWindow, () -> windowFlags[0] = 0), "old cleanup mutated a later stopped owner");
+        windows.destroy();
+        check(windows.cleanup(newWindow, () -> windowFlags[0] = 0), "terminal cleanup was blocked");
+        check(windowFlags[0] == 0, "terminal cleanup retained window flags");
         RouteTracker routes = new RouteTracker(new int[]{3,1});
         check(!routes.changed(new int[]{1,3,3}), "initial/duplicate output set changed route");
         check(routes.changed(new int[]{1,4}), "output replacement was ignored");

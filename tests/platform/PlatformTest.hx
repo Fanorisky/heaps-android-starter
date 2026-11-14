@@ -43,6 +43,15 @@ class PlatformTest {
   });
   interrupted.ingest(0); interrupted.ingest(2); interrupted.dispatch();
   eq(interruptedEvents.join(","), "0,1,3");
+  var restarting = new LifecycleStore(); var restartEvents:Array<Int> = [];
+  restarting.subscribe(event -> {
+   restartEvents.push(event);
+   if((event:Int) == 1) { restarting.beginSession(); restarting.reconcile(3); restarting.dispatch(); }
+  });
+  restarting.reconcile(3); restarting.dispatch(); restartEvents = [];
+  restarting.reset();
+  eq(restartEvents.join(","), "1,0,2");
+  eq(restarting.foreground, true); eq(restarting.focused, true);
   var resetPending = new LifecycleStore(); var afterReset:Array<Int> = [];
   resetPending.subscribe(event -> afterReset.push(event));
   resetPending.ingest(0); resetPending.ingest(2); resetPending.reset();

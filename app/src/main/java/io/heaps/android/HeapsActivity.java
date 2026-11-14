@@ -39,6 +39,11 @@ public final class HeapsActivity extends SDLActivity {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && services != null) services.reapplyDisplay();
     }
+    @Override public void onSystemUiVisibilityChange(int visibility) {
+        // Replace SDL's untagged delayed rehider with the SDK session-owned callback.
+        if (services != null) services.systemUiVisibilityChanged(visibility);
+    }
+    void displayStopped() { mFullscreenModeActive = false; }
     @Override protected void onDestroy() {
         if (services != null) services.destroy();
         super.onDestroy();

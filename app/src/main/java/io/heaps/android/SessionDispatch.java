@@ -15,7 +15,7 @@ final class SessionDispatch {
     private static final AtomicLong epochs = new AtomicLong();
     private final NativeDispatch nativeDispatch;
     private final Publication publication;
-    private Session current;
+    private Session current, latest;
     private boolean destroyed, foreground, windowFocus;
     SessionDispatch(NativeDispatch nativeDispatch, Publication publication) {
         this.nativeDispatch = nativeDispatch; this.publication = publication;
@@ -25,7 +25,7 @@ final class SessionDispatch {
         if (current != null) return current;
         long epoch = epochs.updateAndGet(previous -> previous == Long.MAX_VALUE ? previous : previous + 1);
         if (epoch == Long.MAX_VALUE) return null;
-        current = new Session(epoch);
+        current = latest = new Session(epoch);
         nativeDispatch.run(() -> publication.start(epoch, foreground, windowFocus));
         return current;
     }
@@ -36,6 +36,13 @@ final class SessionDispatch {
     synchronized boolean run(Session session, Runnable callback) {
         if (!valid(session)) return false;
         return nativeDispatch.run(callback);
+    }
+    /** Cleanup is Java-only and permitted for the latest stopped owner, including destroy.
+     * Old queued cleanup cannot alter a newer active or stopped session's window. */
+    synchronized boolean cleanup(Session session, Runnable callback) {
+        if (session == null || current != null || latest != session) return false;
+        callback.run();
+        return true;
     }
     synchronized void foreground(boolean value, Consumer<Session> callback) {
         foreground = value;

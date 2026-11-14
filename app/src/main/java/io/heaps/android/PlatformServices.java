@@ -31,7 +31,7 @@ final class PlatformServices {
     private final Object sensorLock = new Object(), hapticLock = new Object(), focusLock = new Object();
     private static final AtomicInteger focusGenerations = new AtomicInteger();
     private final SessionDispatch sessions;
-    private Resources resources, displayOwner;
+    private Resources resources;
 
     /** Every callback and every Android registration belongs to one immutable session. */
     private final class Resources {
@@ -40,6 +40,7 @@ final class PlatformServices {
         final SensorEventListener sensorListener;
         final AudioDeviceCallback routeListener;
         final RouteTracker routes;
+        final Runnable rehideSystemUi;
         boolean immersive = BuildConfig.DISPLAY_IMMERSIVE, keepAwake = BuildConfig.DISPLAY_KEEP_AWAKE;
         int focusGeneration;
         AudioManager.OnAudioFocusChangeListener focusListener;
@@ -47,6 +48,7 @@ final class PlatformServices {
         boolean routeRegistered;
         Resources(SessionDispatch.Session session) {
             this.session = session;
+            rehideSystemUi = () -> sessions.run(session, () -> reapplyDisplay(Resources.this));
             routes = new RouteTracker(outputIds());
             sensorListener = new SensorEventListener() {
                 @Override public void onSensorChanged(SensorEvent event) { publishSensor(Resources.this, event); }
@@ -92,7 +94,6 @@ final class PlatformServices {
             Resources r = new Resources(session); resources = r;
             main.post(() -> sessions.run(session, () -> {
                 View decor = activity.getWindow().getDecorView();
-                displayOwner = r;
                 decor.setOnApplyWindowInsetsListener((view, insets) -> {
                     sessions.run(session, () -> publishInsets(r, insets)); return insets;
                 });
@@ -277,6 +278,15 @@ final class PlatformServices {
             Resources r = resources; if (r != null) main.post(() -> sessions.run(r.session, () -> reapplyDisplay(r)));
         }
     }
+    void systemUiVisibilityChanged(int visibility) {
+        synchronized (sessions) {
+            Resources r = resources;
+            int hidden = View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+            if (r == null || !sessions.valid(r.session) || !r.immersive || (visibility & hidden) == hidden) return;
+            main.removeCallbacks(r.rehideSystemUi);
+            main.postDelayed(r.rehideSystemUi, 2000);
+        }
+    }
     private void reapplyDisplay(Resources r) {
         View decor = activity.getWindow().getDecorView();
         if (r.immersive) {
@@ -320,13 +330,17 @@ final class PlatformServices {
             resources = null;
             if (r == null) return;
             abandonFocus(r); cancelVibrationLocked(); unregisterSensors(r);
+            main.removeCallbacks(r.rehideSystemUi);
             try { if (audio != null && r.routeRegistered) audio.unregisterAudioDeviceCallback(r.routeListener); } catch (RuntimeException ignored) {}
-            main.post(() -> {
-                synchronized (sessions) {
-                    if (displayOwner == r) { activity.getWindow().getDecorView().setOnApplyWindowInsetsListener(null); displayOwner = null; }
-                    if (sessions.current() == null) activity.hideIme();
-                }
-            });
+            main.post(() -> sessions.cleanup(r.session, () -> {
+                View decor = activity.getWindow().getDecorView();
+                decor.setOnApplyWindowInsetsListener(null);
+                activity.displayStopped();
+                activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                decor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+                decor.requestApplyInsets();
+                activity.hideIme();
+            }));
         }
     }
     void destroy() { synchronized (sessions) { shutdown(); sessions.destroy(); } }

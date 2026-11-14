@@ -39,6 +39,11 @@ class LifecycleStore {
   if(foreground != nextForeground) ingest(nextForeground ? 0 : 1);
   if(focused != nextFocused) ingest(nextFocused ? 2 : 3);
  }
+ /** Startup invalidates callbacks captured by a previous session's dispatch. */
+ public function beginSession():Void {
+  generation++;
+  events = [];
+ }
  /** Reversible SDK stop preserves subscribers but discards queued session events. */
  public function reset():Void {
   generation++;

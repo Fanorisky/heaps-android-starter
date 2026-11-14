@@ -12,7 +12,7 @@ class Android {
  }
  public static function init():Void {
   if(initialized) return;
-  prepare(); Native.init(); initialized = true;
+  prepare(); Native.init(); Lifecycle.beginSession(); initialized = true;
   Audio.bindToSdk();
   // Startup playback may run before the first MainLoop tick.
   update();
