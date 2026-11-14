@@ -65,6 +65,14 @@ class HeapsAudioHooksTest {
         value.calcAudibleVolume(resumed + 0.06);
         check(completed, "Resumed fade never completed");
 
+        // Repeated effective unpause assignments must not move lastStamp.
+        // This guards resumed virtual progress against per-frame clock resets.
+        var unpaused = channel();
+        unpaused.pause = true; unpaused.pause = false;
+        var unpauseStamp = unpaused.lastStamp;
+        for (i in 0...20) unpaused.pause = false;
+        check(unpaused.lastStamp == unpauseStamp, "Repeated unpause reset the virtual channel clock");
+
         // Starting a fade partway through a long user pause must retain its
         // full duration on resume, even though the pause began before it.
         var created = channel();

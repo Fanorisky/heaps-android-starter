@@ -19,6 +19,8 @@ class AudioRegression {
     static var savedSfxMuted:Bool;
     static var testSfx:Array<Channel>;
     static var virtualCase:Bool;
+    static var resumedAt:Float;
+    static var resumeSamples:Int;
 
     public static function start(sample:Sound, callback:(Bool, String)->Void):Void {
         if (isRunning) { callback(false, "Audio checks already running"); return; }
@@ -122,9 +124,30 @@ class AudioRegression {
                     if (Math.abs(channel.position - position) > 0.002) { finish(false, "Paused loop position advanced with wall time"); return; }
                     if (!Audio.resume()) { finish(false, "Explicit resume denied"); return; }
                     if (channel.pause || Math.abs(channel.position - position) > 0.002) { finish(false, "Resume reset position or kept pause"); return; }
-                    stage = 3; deadline = now + 0.11;
+                    resumedAt = haxe.Timer.stamp();
+                    resumeSamples = 0;
+                    diagnostics("resume", resumedAt);
+                    stage = 3; deadline = resumedAt + 0.11;
                 case 3:
-                    if (!advanced(position, channel.position)) { finish(false, "Resumed loop position did not advance"); return; }
+                    ++resumeSamples;
+                    var correctOutput = virtualCase ? (@:privateAccess channel.isVirtual)
+                        : !(@:privateAccess channel.isVirtual) && hasPlayingSource();
+                    var converged = Audio.state == Running && !channel.pause && correctOutput && advanced(position, channel.position);
+                    if (!converged) {
+                        if (resumeSamples == 1) diagnostics("resume-check", now);
+                        if (now >= resumedAt + 1.0) {
+                            diagnostics("resume-timeout", now);
+                            finish(false, "Resumed " + (virtualCase ? "virtual" : "audible")
+                                + " loop did not advance with valid output within 1s (samples=" + resumeSamples + ")");
+                            return;
+                        }
+                        // OpenSL can resume its device before the first new
+                        // source buffer is mixed. Require measured progress,
+                        // with a finite bound, rather than accepting silence.
+                        deadline = now + 0.02;
+                        return;
+                    }
+                    diagnostics("resume-progress", now);
                     if (!virtualCase) {
                         virtualCase = true; Audio.musicMuted = true; begin();
                     } else {
@@ -140,6 +163,26 @@ class AudioRegression {
                     RawAudioRegression.start(sound, function(ok, detail) finish(ok, "Wrapper and " + detail));
             }
         } catch (error:Dynamic) { finish(false, Std.string(error)); }
+    }
+    static function diagnostics(point:String, now:Float):Void {
+        var gate = Audio.state;
+        var gateError = Audio.error;
+        var manager = @:privateAccess hxd.snd.Manager.instance;
+        var source = @:privateAccess channel.source;
+        var sourceState = source == null ? -1 : openal.AL.getSourcei(source.handle.inst, openal.AL.SOURCE_STATE);
+        var sampleOffset = source == null ? -1 : openal.AL.getSourcei(source.handle.inst, openal.AL.SAMPLE_OFFSET);
+        var queued = source == null ? -1 : openal.AL.getSourcei(source.handle.inst, openal.AL.BUFFERS_QUEUED);
+        var processed = source == null ? -1 : openal.AL.getSourcei(source.handle.inst, openal.AL.BUFFERS_PROCESSED);
+        Sys.println("AUDIO_DIAG point=" + point + " virtualCase=" + virtualCase
+            + " elapsed=" + (now - resumedAt) + " samples=" + resumeSamples + " state=" + gate + " error=" + gateError
+            + " foreground=" + heapsandroid.Lifecycle.foreground + " focused=" + heapsandroid.Lifecycle.focused
+            + " position=" + channel.position + " baseline=" + position + " pause=" + channel.pause
+            + " virtual=" + (@:privateAccess channel.isVirtual) + " lastStamp=" + (@:privateAccess channel.lastStamp)
+            + " managerNow=" + (manager == null ? -1 : @:privateAccess manager.now)
+            + " suspended=" + (manager == null || manager.suspended)
+            + " source=" + (source != null) + " sourcePlaying=" + (source != null && source.playing)
+            + " alState=" + sourceState + " sampleOffset=" + sampleOffset
+            + " queued=" + queued + " processed=" + processed);
     }
     static function hasPlayingSource():Bool {
         var source = @:privateAccess channel.source;
