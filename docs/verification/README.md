@@ -1,5 +1,7 @@
 # Verification — 2026-11-13
 
+The records below describe the previous application. GameBase migration evidence is recorded separately in [gamebase-v0.3.0](gamebase-v0.3.0/README.md); historical gameplay screenshots and reports do not verify the new foundation.
+
 ![Native Android gameplay](overview.png)
 
 Verified locally with Haxe4.3.6, JDK21, SDK35, NDK28.2.13676358 and CMake3.30.3 on Debian. The debug APK was built for ARM64 and x86_64, then installed on an Android30 x86_64 emulator with GLES3.

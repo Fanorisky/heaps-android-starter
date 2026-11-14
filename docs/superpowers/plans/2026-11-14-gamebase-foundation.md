@@ -17,8 +17,8 @@
 
 ## Tasks
 
-- [ ] Pin GameBase's Haxe libraries, register them repository-locally and preserve dependency notices. Compile a real GameBase HLC smoke target to expose compatibility failures before adapting sources.
-- [ ] Import GameBase sources/resources, remove sample players and arcade-specific sources/tests, start an empty world and add Android lifecycle/private crash reporting adaptations. Keep Boot as the native entry point.
-- [ ] Preserve SDK Features as a scaled independent overlay with explicit pause/resume and cleanup. Move WAV fixtures to res/android and update resource references.
-- [ ] Update build metadata, asset generation, automation and README. Separate historical verification from evidence for this new app.
-- [ ] Run pure/Java/sanitized native/patch/asset regressions and native HLC compilation. Install the SDK and build/verify the three-ABI APK when available; document exact limitations. Inspect final diff and commit locally on feat/gamebase-foundation.
+- [x] Pin GameBase's Haxe libraries, register them repository-locally and preserve dependency notices. Compile a real GameBase HLC smoke target to expose compatibility failures before adapting sources.
+- [x] Import GameBase sources/resources, remove sample players and arcade-specific sources/tests, start an empty world and add Android lifecycle/private crash reporting adaptations. Keep Boot as the native entry point.
+- [x] Preserve SDK Features as a scaled independent overlay with explicit pause/resume and cleanup. Move WAV fixtures to res/android and update resource references.
+- [x] Update build metadata, asset generation, automation and README. Separate historical verification from evidence for this new app.
+- [x] Run pure/Java/sanitized native/patch/asset regressions and native HLC compilation. Install the SDK and build/verify the three-ABI APK when available; document exact limitations. Inspect final diff and commit locally on feat/gamebase-foundation.

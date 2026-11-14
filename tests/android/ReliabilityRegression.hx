@@ -26,6 +26,7 @@ class ReliabilityRegression {
  static var cycles=0;
  static var background=false;
  static var unsubscribe:Void->Void;
+ static var snapshotPump:haxe.MainLoop.MainEvent;
  static var savedImmersive:Bool;
  static var savedAwake:Bool;
  static function check(ok:Bool,text:String):Void {if(!ok)throw text;}
@@ -42,6 +43,13 @@ class ReliabilityRegression {
     if(event==Background){background=true;deadline=haxe.Timer.stamp()+.08;phase=5;}
     if(event==Foreground&&background){phase=6;deadline=haxe.Timer.stamp()+.12;}
    });
+   // App updates/rendering can precede the Manager in a MainLoop turn.
+   // Sample after the audio update, so a slow foreground frame is not mistaken
+   // for playback advancing during the subsequent background interval.
+   snapshotPump=haxe.MainLoop.add(()->{
+    if(isRunning&&phase==7&&!background&&Lifecycle.foreground&&Audio.state==Running)snapshot();
+   },-100);
+   snapshotPump.isBlocking=false;
    deadline=haxe.Timer.stamp()+.3;
   }catch(error:Dynamic){finish(false,Std.string(error));}
  }
@@ -80,7 +88,9 @@ class ReliabilityRegression {
      check(Audio.state==Paused&&audible.pause&&muted.pause,'Foreground restored playback intent');
      // A paused source may synchronize one device offset after focus loss;
      // muted virtual time must never consume the background interval.
-     check(Math.abs(muted.position-positions[1])<.02,'Muted loop skipped background wall time');
+     check(Math.abs(muted.position-positions[1])<.02,
+      'Muted loop skipped background wall time baseline='+positions[1]+' current='+muted.position+
+      ' lastStamp='+(@:privateAccess muted.lastStamp)+' managerNow='+(@:privateAccess hxd.snd.Manager.get().now));
      check(userPaused.pause,'User pause erased by lifecycle');
      cycles++;background=false;
      check(Audio.resume(),'Explicit resume after foreground denied');
@@ -92,14 +102,13 @@ class ReliabilityRegression {
       finish(true,'10 framework cycles, SDK restart, raw/virtual/user pause and fresh paused recovery');
      }else{phase=4;deadline=now+.15;}
     case 7:
-     // Keep the last actual foreground frame, not the earlier READY log time.
-     // Background/Foreground can arrive together; never overwrite after loss.
-     if(!background&&Lifecycle.foreground&&Audio.state==Running)snapshot();
+     // The post-Manager pump records the last complete foreground audio frame.
    }
   }catch(error:Dynamic){finish(false,Std.string(error));}
  }
  static function finish(ok:Bool,message:String):Void {
   isRunning=false;if(unsubscribe!=null)unsubscribe();unsubscribe=null;
+  if(snapshotPump!=null)snapshotPump.stop();snapshotPump=null;
   for(channel in [audible,muted,userPaused])if(channel!=null&&!channel.isReleased())channel.stop();
   Display.setImmersive(savedImmersive);Display.setKeepAwake(savedAwake);
   var callback=report;report=null;sound=null;audible=muted=userPaused=null;

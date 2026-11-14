@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
-    <application android:allowBackup="false" android:label="@string/app_name" android:icon="@drawable/ic_ship" android:theme="@style/GameTheme" android:hasCode="true">
+    <application android:allowBackup="false" android:label="@string/app_name" android:icon="@drawable/ic_gamebase" android:theme="@style/GameTheme" android:hasCode="true">
         <activity android:name="io.heaps.android.BrokenLibrariesActivity" android:exported="true" android:screenOrientation="${APP_ORIENTATION}" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

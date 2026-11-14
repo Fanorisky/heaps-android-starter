@@ -1,0 +1,84 @@
+{
+  "application": {
+    "package": "io.heaps.android.proof",
+    "versionCode": 4,
+    "versionName": "0.3.0",
+    "activity": "io.heaps.android.HeapsActivity",
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ],
+    "minSdk": 24,
+    "label": "GameBase Android"
+  },
+  "certificateSha256": "72a17b7ce0fb4724b30a89fd3a36ab1635fae63665472647f47cf4ecced005a3",
+  "libraries": {
+    "armeabi-v7a": {
+      "libmain.so": {
+        "bytes": 6221000,
+        "machine": "ARM"
+      },
+      "libhl.so": {
+        "bytes": 453700,
+        "machine": "ARM"
+      },
+      "libSDL2.so": {
+        "bytes": 888288,
+        "machine": "ARM"
+      },
+      "libopenal.so": {
+        "bytes": 889424,
+        "machine": "ARM"
+      },
+      "libc++_shared.so": {
+        "bytes": 850380,
+        "machine": "ARM"
+      }
+    },
+    "arm64-v8a": {
+      "libmain.so": {
+        "bytes": 9074224,
+        "machine": "AArch64"
+      },
+      "libhl.so": {
+        "bytes": 614168,
+        "machine": "AArch64"
+      },
+      "libSDL2.so": {
+        "bytes": 1229840,
+        "machine": "AArch64"
+      },
+      "libopenal.so": {
+        "bytes": 1219072,
+        "machine": "AArch64"
+      },
+      "libc++_shared.so": {
+        "bytes": 1253544,
+        "machine": "AArch64"
+      }
+    },
+    "x86_64": {
+      "libmain.so": {
+        "bytes": 9702920,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libhl.so": {
+        "bytes": 647968,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libSDL2.so": {
+        "bytes": 1363544,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libopenal.so": {
+        "bytes": 1302648,
+        "machine": "Advanced Micro Devices X86-64"
+      },
+      "libc++_shared.so": {
+        "bytes": 1229808,
+        "machine": "Advanced Micro Devices X86-64"
+      }
+    }
+  }
+}

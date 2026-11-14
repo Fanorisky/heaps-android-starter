@@ -21,7 +21,7 @@ audio focus or applied window flags. APK/emulator/device checks establish those
 behaviors; `ApiCompile` must not be executed as a hardware proof.
 
 `StartupRegression.hx` is an Android-backed cold-start application. Build it
-with the same library flags as `ApiCompile`, add `-D resourcesPath=assets`, and
+with the same library flags as `ApiCompile`, add `-D resourcesPath=res`, and
 use `-main StartupRegression`. In `hxd.App.init`, before the first MainLoop tick,
 it checks synchronized lifecycle state/callback ordering and creation of a real
 music channel. It reports `ANDROID_STARTUP_TEST_PASS` or `FAIL` in Android logs.

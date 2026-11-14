@@ -14,7 +14,7 @@ class Storage {
             #if (android && hl)
             roots=new StorageRoots(heapsandroid.internal.Native.filesPath(),heapsandroid.internal.Native.cachePath());
             #else
-            roots=new StorageRoots('.neon-drift','.neon-drift/cache');
+            roots=new StorageRoots('.heaps-android','.heaps-android/cache');
             #end
         }
         return roots;

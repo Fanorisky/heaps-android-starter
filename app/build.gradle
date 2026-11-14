@@ -2,9 +2,9 @@ plugins { id 'com.android.application' }
 
 def setting = { String key, String fallback -> project.hasProperty(key) ? project.property(key).toString() : fallback }
 def appId = setting('app.application_id', 'io.heaps.android.proof')
-def appName = setting('app.name', 'Heaps Android Proof')
-def appVersion = setting('app.version_name', '0.2.0')
-def versionNumber = setting('app.version_code', '2')
+def appName = setting('app.name', 'GameBase Android')
+def appVersion = setting('app.version_name', '0.3.0')
+def versionNumber = setting('app.version_code', '4')
 def orientation = setting('app.orientation', 'portrait')
 def booleanSetting = { String key, String fallback ->
     def value = setting(key, fallback)
@@ -96,7 +96,7 @@ def generateHlc = tasks.register('generateHlc', Exec) {
     commandLine 'bash', 'scripts/generate-hlc.sh'
     environment 'HEAPS_AUDIO_FAULT_TESTS', project.hasProperty('androidAudioFaultTests') ? 'true' : 'false'
     inputs.property('audioFaultTests', project.hasProperty('androidAudioFaultTests'))
-    inputs.files(fileTree("${rootDir}/src"), fileTree("${rootDir}/lib"), fileTree("${rootDir}/assets"), fileTree("${rootDir}/tests/android"), file("${rootDir}/game.hxml"))
+    inputs.files(fileTree("${rootDir}/src"), fileTree("${rootDir}/lib"), fileTree("${rootDir}/res"), fileTree("${rootDir}/tests/android"), file("${rootDir}/game.hxml"), file("${rootDir}/third_party/dependencies.lock.json"))
     outputs.dir("${rootDir}/build/hlc")
 }
 tasks.configureEach { task ->

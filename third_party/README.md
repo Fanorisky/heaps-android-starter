@@ -1,4 +1,4 @@
-# Pinned native dependencies
+# Pinned dependencies
 
 `dependencies.lock.json` records exact archive URLs, revisions and SHA256 hashes. Setup verifies cached/downloaded archives before extracting ignored `vendor/` sources and applies the explicit patches idempotently. Haxelib mappings are local to the template.
 
@@ -12,4 +12,6 @@ Our build options are in `app/src/main/cpp/audio/CMakeLists.txt`. OpenAL source 
 
 PNG/zlib/TurboJPEG/Ogg/Vorbis supply real image/audio format decoding. HashLink's retained native mesh utilities are built from their upstream sources. HashLink's official non-Windows `ui_stub.c` covers desktop dialog/sentinel references; game and proof screens are rendered in Heaps.
 
-Other dependency license copies are under `licenses/`. Original generated example asset authorship/license information is in `assets/LICENSE.txt`. Template code is MIT; dependencies retain their respective licenses.
+GameBase and its additional Haxe dependencies are pinned alongside the native sources. Import provenance and Android adaptations are documented in [gamebase.md](gamebase.md).
+
+Other dependency license copies are under `licenses/`. Original generated audio fixture authorship/license information is in `res/android/LICENSE.txt`. Template code is MIT; dependencies retain their respective licenses.

@@ -20,7 +20,7 @@ import heapsandroid.Audio.AudioState;
 
 typedef FeatureButton={x:Float,y:Float,w:Float,h:Float,action:Void->Void};
 
-/** Live developer proof of the reusable SDK. Game presentation stays in Main. */
+/** Live developer proof of the reusable SDK, independent of GameBase gameplay. */
 class FeaturesView extends Object {
     final settings:DemoSettings;
     final editor:UnicodeEditor;
@@ -44,20 +44,19 @@ class FeaturesView extends Object {
         super(parent); this.settings=settings; this.close=close;
         editor=new UnicodeEditor(64); editor.setText(settings.editorText);
         var g=new Graphics(this); g.beginFill(0x07101e); g.drawRect(0,0,360,640); g.endFill();
-        var sprite=new h2d.Bitmap(hxd.Res.ship.toTile(),this); sprite.x=18;sprite.y=10;
-        label('DEVELOPER FEATURES',58,17,1.15,CYAN);
+        label('ANDROID FEATURES',18,17,1.15,CYAN);
         var device=Device.info();
         label('SDK '+device.sdk+' / APP '+device.appAbi,18,48,0.72);
         label('SUPPORTED '+device.supportedAbis.join(', '),18,64,0.6);
         label(device.model,18,79,0.65);
         audioText=label('',18,99,0.72);
-        button('MUSIC',18,116,60,28,function(){Audio.playMusic(hxd.Res.music,true);status('Looping music requested');});
+        button('MUSIC',18,116,60,28,function(){Audio.playMusic(hxd.Res.android.music,true);status('Looping music requested');});
         button('PAUSE',84,116,60,28,function(){Audio.pause();status('Audio paused');});
         button('RESUME',150,116,60,28,function(){status(Audio.resume()?'Audio resumed':'Audio unavailable / focus denied');});
         button('STOP',216,116,54,28,function(){Audio.stopMusic();status('Music stopped');});
         button('CHECKS',276,116,66,28,function(){
             status('Audio checks running');
-            AudioRegression.start(hxd.Res.music,function(ok,message){
+            AudioRegression.start(hxd.Res.android.music,function(ok,message){
                 Sys.println((ok ? 'AUDIO_TEST_PASS ' : 'AUDIO_TEST_FAIL ') + message);
                 status((ok ? 'Audio checks passed: ' : 'Audio checks failed: ') + message);
                 statusText.textColor = ok ? WHITE : 0xff587f;
@@ -71,12 +70,12 @@ class FeaturesView extends Object {
         button('-',160,182,36,27,function(){settings.sfxVolume-=0.1;applySettings();});
         button('+',202,182,36,27,function(){settings.sfxVolume+=0.1;applySettings();});
         button('MUTE',244,182,98,27,function(){settings.sfxMuted=!settings.sfxMuted;applySettings();});
-        button('UI',18,218,50,28,function(){testSound(hxd.Res.ui);});
-        button('START',73,218,50,28,function(){testSound(hxd.Res.start);});
-        button('PICK',128,218,50,28,function(){testSound(hxd.Res.pickup);});
-        button('HIT',183,218,50,28,function(){testSound(hxd.Res.hit);});
-        button('WIN',238,218,50,28,function(){testSound(hxd.Res.win);});
-        button('LOSE',293,218,49,28,function(){testSound(hxd.Res.lose);});
+        button('UI',18,218,50,28,function(){testSound(hxd.Res.android.ui);});
+        button('START',73,218,50,28,function(){testSound(hxd.Res.android.start);});
+        button('PICK',128,218,50,28,function(){testSound(hxd.Res.android.pickup);});
+        button('HIT',183,218,50,28,function(){testSound(hxd.Res.android.hit);});
+        button('WIN',238,218,50,28,function(){testSound(hxd.Res.android.win);});
+        button('LOSE',293,218,49,28,function(){testSound(hxd.Res.android.lose);});
         label('COMMITTED TEXT / 64 UNICODE SCALARS',18,259,0.64,CYAN);
         editorText=label('',18,278,0.83);editorText.maxWidth=320;
         button('SHOW KEYBOARD',18,308,155,29,function(){if(Keyboard.show({x:18,y:278,width:324,height:26}))editor.begin();else status('Keyboard unavailable');});
@@ -92,10 +91,10 @@ class FeaturesView extends Object {
         button('KEEP AWAKE',187,484,155,29,function(){Display.setKeepAwake(!Display.keepAwake);});
         displayText=label('',18,522,0.64);
         statusText=label('Tap a control to test the Android host.',18,553,0.66);statusText.maxWidth=324;
-        button('BACK TO NEON DRIFT',40,595,280,32,function(){hideView();close();});
+        button('BACK TO GAMEBASE',40,595,280,32,function(){hideView();close();});
         button('STRESS',276,574,66,18,function(){
             status('Lifecycle stress running');
-            ReliabilityRegression.start(hxd.Res.music,function(ok,message){
+            ReliabilityRegression.start(hxd.Res.android.music,function(ok,message){
                 Sys.println((ok?'RELIABILITY_TEST_PASS ':'RELIABILITY_TEST_FAIL ')+message);
                 status(message);
             });

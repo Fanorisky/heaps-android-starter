@@ -8,14 +8,6 @@
       180,
       556
     ],
-    "pausedFeatures": [
-      180,
-      502
-    ],
-    "resultsFeatures": [
-      180,
-      504
-    ],
     "musicPlay": [
       48,
       130
@@ -127,6 +119,10 @@
     "reliabilityChecks": [
       309,
       583
+    ],
+    "gamePauseResume": [
+      180,
+      605
     ]
   }
 }

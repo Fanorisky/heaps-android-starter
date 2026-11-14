@@ -39,10 +39,15 @@ def tap(name):
  scale=min(width/360,height/640)
  adb('shell','input','tap',str(round((width-360*scale)/2+x*scale)),str(round((height-640*scale)/2+y*scale)))
 try:
- adb('wait-for-device');adb('install','-r',str(Path(args.apk).resolve()))
+ adb('wait-for-device')
+ boot_deadline=time.monotonic()+120
+ while adb('shell','getprop','sys.boot_completed').strip()!='1':
+  if time.monotonic()>=boot_deadline:raise AssertionError('Android did not finish booting')
+  time.sleep(1)
+ adb('install','-r',str(Path(args.apk).resolve()))
  adb('shell','am','force-stop',package);adb('logcat','-c')
  adb('shell','input','keyevent','KEYCODE_WAKEUP');launch()
- wait_for(r'Neon Drift: phase=title');time.sleep(1);capture('sdk-title')
+ wait_for(r'GameBase: ready');time.sleep(1);capture('gamebase-foundation')
  tap('titleFeatures');time.sleep(.5);capture('sdk-features')
  tap('audioChecks')
  result=wait_for(r'AUDIO_TEST_(?:PASS|FAIL)[^\n]+',seconds=30)
@@ -75,11 +80,14 @@ try:
   launch();time.sleep(1);capture('sdk-returned-paused')
   tap('audioResume');wait_for('Audio resumed');time.sleep(.5)
   tap('featuresBack');time.sleep(.3)
-  # Normal game entry/exit proves platform integration retains the sample loop.
-  width,height=map(int,re.findall(r'(\d+)x(\d+)',adb('shell','wm','size'))[-1]);scale=min(width/360,height/640)
-  adb('shell','input','tap',str(round(width/2)),str(round((height-640*scale)/2+477*scale)))
-  wait_for('phase=playing');time.sleep(1);capture('sdk-gameplay')
-  adb('shell','am','force-stop',package);adb('logcat','-c');launch();wait_for('phase=title')
+  # Explicitly resume GameBase after the lifecycle stress pause.
+  before_resume=logs().count('GameBase: running')
+  tap('gamePauseResume')
+  end=time.monotonic()+10
+  while logs().count('GameBase: running')<=before_resume and time.monotonic()<end:time.sleep(.3)
+  assert logs().count('GameBase: running')>before_resume,'GameBase failed to resume explicitly'
+  time.sleep(1);capture('gamebase-resumed')
+  adb('shell','am','force-stop',package);adb('logcat','-c');launch();wait_for('GameBase: ready')
   assert adb('shell','run-as',package,'cat','files/heaps-android-settings.json')==prefs,'Preferences changed after process restart'
  log=logs();assert 'Fatal signal' not in log and 'FATAL EXCEPTION' not in log,log
  (OUT/'sdk-logcat.txt').write_text(log)

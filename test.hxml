@@ -1,4 +1,4 @@
 -cp src
--cp tests
--main GameModelTest
+-cp tests/gamebase
+-main SessionPolicyTest
 --interp

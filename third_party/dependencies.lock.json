@@ -78,5 +78,61 @@
     "url": "https://codeload.github.com/kcat/openal-soft/tar.gz/dc7d7054a5b4f3bec1dc23a42fd616a0847af948",
     "sha256": "dd733d74c33b106b90f83a0e0e9917b39aa401162ff8da23d7948615dcb92ef7",
     "archive": "openal.tar.gz"
+  },
+  {
+    "name": "deepnightLibs",
+    "repository": "deepnight/deepnightLibs",
+    "revision": "324b2a4a194169e3901038bec2f37f737adc539b",
+    "url": "https://codeload.github.com/deepnight/deepnightLibs/tar.gz/324b2a4a194169e3901038bec2f37f737adc539b",
+    "sha256": "c8fc6d2d44a19980e40b7ed75a9e171e0d3cd776b50450781635fcd1143b0629",
+    "archive": "deepnightLibs.tar.gz"
+  },
+  {
+    "name": "castle",
+    "repository": "deepnight/castle",
+    "revision": "261c8db1f47279f50444737cff368486244bdf7b",
+    "url": "https://codeload.github.com/deepnight/castle/tar.gz/261c8db1f47279f50444737cff368486244bdf7b",
+    "sha256": "1ef3afed0f7ded450ccb624eb1244132d9e96c89f244dc9f65353d5fbd45a0fe",
+    "archive": "castle.tar.gz"
+  },
+  {
+    "name": "hscript",
+    "repository": "HaxeFoundation/hscript",
+    "revision": "80e3610e15e97dd5e2223c93fa72e49e41c376d7",
+    "url": "https://codeload.github.com/HaxeFoundation/hscript/tar.gz/80e3610e15e97dd5e2223c93fa72e49e41c376d7",
+    "sha256": "604ad5c2f537bc498deca9ad8c503efd009d012e851343980faba8bcaf36eb83",
+    "archive": "hscript.tar.gz"
+  },
+  {
+    "name": "ldtk-haxe-api",
+    "repository": "deepnight/ldtk-haxe-api",
+    "revision": "22d7ee209b7a9f5775d53407253ec9432fc588db",
+    "url": "https://codeload.github.com/deepnight/ldtk-haxe-api/tar.gz/22d7ee209b7a9f5775d53407253ec9432fc588db",
+    "sha256": "a73b72c31c8de5f24d1377538f4828b528d6b6171d8eb2798bb0c4ab8429bc5b",
+    "archive": "ldtk-haxe-api.tar.gz"
+  },
+  {
+    "name": "heaps-aseprite",
+    "repository": "deepnight/heaps-aseprite",
+    "revision": "34911b60b2023f818c453c9a16e2cfd26a80cdf3",
+    "url": "https://codeload.github.com/deepnight/heaps-aseprite/tar.gz/34911b60b2023f818c453c9a16e2cfd26a80cdf3",
+    "sha256": "1cddfa7dea156bf85ffafe57a88d31ece14f2f90dfd8bc2acf2b51d912fb2ed3",
+    "archive": "heaps-aseprite.tar.gz"
+  },
+  {
+    "name": "ase",
+    "repository": "miriti/ase",
+    "revision": "1d83249091bbe06e8bbfe76c4b0a0805d82a3bb6",
+    "url": "https://codeload.github.com/miriti/ase/tar.gz/1d83249091bbe06e8bbfe76c4b0a0805d82a3bb6",
+    "sha256": "684e75a80f868c9422b6a11407a0dd2c1c7dd5e08275a1bc5444cc56a959ac10",
+    "archive": "ase.tar.gz"
+  },
+  {
+    "name": "gamebase",
+    "repository": "deepnight/gameBase",
+    "revision": "a7af1d70dbbf62d7fc09cb05431ced606e0ed809",
+    "url": "https://codeload.github.com/deepnight/gameBase/tar.gz/a7af1d70dbbf62d7fc09cb05431ced606e0ed809",
+    "sha256": "25f27f816c28833c2197d0cc6d5625b5bc6837c4acd5aac374c2541c4d4c8726",
+    "archive": "gamebase.tar.gz"
   }
 ]

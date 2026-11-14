@@ -1,6 +1,6 @@
 package demo;
 import heapsandroid.Preferences;
-/** Preferences for the SDK proof; the game's .sav file stays independent. */
+/** Persisted settings for the SDK proof screen, independent of GameBase. */
 class DemoSettings {
     var preferences:Preferences;
     public var musicVolume(get,set):Float;

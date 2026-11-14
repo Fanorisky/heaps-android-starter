@@ -18,7 +18,7 @@ class StartupRegression extends hxd.App {
    if(events.length == 0 || events[0] != 0) throw "Initial foreground callback was not dispatched";
    hxd.Res.initEmbed();
    if(!Audio.init()) throw "Real OpenAL device unavailable";
-   if(Audio.playMusic(hxd.Res.music, true) == null) throw "Cold-start music channel was not created";
+   if(Audio.playMusic(hxd.Res.android.music, true) == null) throw "Cold-start music channel was not created";
    trace("ANDROID_STARTUP_TEST_PASS");
   } catch(error:Dynamic) {
    trace('ANDROID_STARTUP_TEST_FAIL: $error');

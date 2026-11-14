@@ -73,8 +73,9 @@ jobs:
             dist/heaps-android-proof.apk.sha256
             dist/verification/apk.json
             dist/verification/signature.txt
-            third_party/licenses/openal/
+            third_party/licenses/
             third_party/dependencies.lock.json
+            third_party/gamebase.md
           if-no-files-found: error
           retention-days: 30
       - name: Remove decoded private identity

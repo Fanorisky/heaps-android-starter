@@ -41,7 +41,7 @@ with zipfile.ZipFile(APK) as archive, tempfile.TemporaryDirectory() as tmp:
             assert found == machine and ('ELF32' if abi=='armeabi-v7a' else 'ELF64') in header, (abi,library,header)
             symbols = run(NDK_BIN / 'llvm-nm', '-D', '--defined-only', path)
             if library == 'libmain.so':
-                for name in ['SDL_main','Main_init','heapsandroid_audio_get_state','Java_io_heaps_android_PlatformServices_nativeForeground']:
+                for name in ['SDL_main','Boot_init','heapsandroid_audio_get_state','Java_io_heaps_android_PlatformServices_nativeForeground']:
                     assert re.search(r'\b'+re.escape(name)+r'$', symbols, re.M), (library,name)
                 assert 'JNI_OnLoad' not in symbols
                 assert not re.search(r'\b[BDRbd] (?:al|alc)[A-Z]\w*$', symbols, re.M), 'OpenAL binding globals interpose audio functions'

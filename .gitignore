@@ -2,6 +2,7 @@
 /dist/
 /vendor/
 /.haxelib/
+/res/.tmp/
 /.gradle/
 /.superpowers/
 /local.properties
