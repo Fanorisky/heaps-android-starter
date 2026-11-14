@@ -7,3 +7,5 @@ c++ -std=c++11 -pthread -fsanitize=address,undefined -fno-omit-frame-pointer \
   app/src/main/cpp/audio/tests/gate_test.cpp app/src/main/cpp/audio/gate_controller.cpp \
   -o build/host-tests/audio-gate
 build/host-tests/audio-gate
+
+tests/audio/run-heaps-hooks.sh

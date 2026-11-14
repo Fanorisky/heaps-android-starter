@@ -128,3 +128,20 @@ GitHub Actions builds ephemeral secret-free PR artifacts and stable signed `proo
 - `patches/`: explicit upstream compatibility fixes, applied idempotently.
 
 This is a native Android template integration, not a Haxelib-only replacement for Android build/host files. Clone the template to obtain those files; the Haxe module is isolated so it can also be incorporated into an existing Android host.
+
+## Reliability and recovery
+
+`Android.shutdown()` stops the SDK session and freezes channels while preserving their Manager, device and positions. `Android.init()` can restart the session in the same live Activity; it does not restore playback intent. Activity destruction remains terminal. `Audio.shutdown()` explicitly releases audio resources.
+
+The native audio gate requires SDK active, Activity foreground, window focus, AudioManager focus and explicit playback intent. Any loss pauses playback; foreground/focus gains do not resume it. Raw `hxd.Res.sound.play()` channels are guarded too, including muted/virtual channels and fades. Raw play during a stopped/background/unfocused session or focus denial returns a paused channel; eligible playback without genuine output throws an explicit unavailable error. Wrapper methods return null on denied/unavailable playback.
+
+`Audio.error` reports device/failure state. `Audio.recover()` makes one genuine device/context/Manager recreation attempt, releases **all old raw and wrapper channels**, and returns with fresh audio paused. Replay resources explicitly afterward. Recovery does not grant focus or revive stale handles. Route subscribers run on the Haxe thread:
+
+```haxe
+var unsubscribe = Audio.subscribeRouteChanges(function(generation) {
+    trace('Audio route changed: ' + generation);
+    // Decide when to recover/resume and replay; no implicit playback.
+});
+```
+
+See [patch maintenance](patches/README.md) and the [physical-device test matrix](docs/verification/physical-device-matrix.md). Pinned build reproducibility does not establish compatibility with arbitrary future engine revisions. Bluetooth audibility, latency and battery performance remain measured-device work, not claims derived from CI.

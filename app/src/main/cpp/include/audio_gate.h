@@ -23,6 +23,8 @@ void audio_set_focus(int generation, int focused);
 void audio_abandon_focus(int generation);
 void audio_set_intent(int wants_running);
 int audio_get_state(void);
+/* Callback-safe observation only; no device-health or context queries. */
+int audio_peek_state(void);
 int audio_get_error(void);
 int audio_check_health(void);
 #ifdef __cplusplus

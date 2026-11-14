@@ -7,6 +7,7 @@
 -D resourcesPath=assets
 -main Main
 -D android
+-D heapsandroid_audio_hooks
 -D windowSize=360x640
 -D hl-ver=1.15.0
 -D no-compilation

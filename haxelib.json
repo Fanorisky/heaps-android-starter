@@ -3,7 +3,7 @@
   "url": "https://github.com/Fanorisky/heaps-android-starter",
   "license": "MIT",
   "description": "Android host and platform services for native Heaps applications",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "classPath": "lib",
   "contributors": ["Fanorisky"],
   "dependencies": {"heaps": "", "hlsdl": "", "hlopenal": ""}

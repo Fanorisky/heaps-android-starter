@@ -8,7 +8,7 @@ import android.view.inputmethod.InputMethodManager;
 import org.libsdl.app.SDLActivity;
 
 /** Fixed host namespace; the applicationId is configured independently. */
-public final class HeapsActivity extends SDLActivity {
+public class HeapsActivity extends SDLActivity {
     private static volatile HeapsActivity current;
     private PlatformServices services;
     private volatile boolean librariesReady;

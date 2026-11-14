@@ -14,6 +14,7 @@ import heapsandroid.Device;
 import heapsandroid.Lifecycle;
 import heapsandroid.Lifecycle.LifecycleEvent;
 import AudioRegression;
+import ReliabilityRegression;
 import PreferencesRegression;
 import heapsandroid.Audio.AudioState;
 
@@ -92,6 +93,13 @@ class FeaturesView extends Object {
         displayText=label('',18,522,0.64);
         statusText=label('Tap a control to test the Android host.',18,553,0.66);statusText.maxWidth=324;
         button('BACK TO NEON DRIFT',40,595,280,32,function(){hideView();close();});
+        button('STRESS',276,574,66,18,function(){
+            status('Lifecycle stress running');
+            ReliabilityRegression.start(hxd.Res.music,function(ok,message){
+                Sys.println((ok?'RELIABILITY_TEST_PASS ':'RELIABILITY_TEST_FAIL ')+message);
+                status(message);
+            });
+        });
         unsubscribe=Lifecycle.subscribe(function(event){if(event==Background){cancelEditor();settings.commit();}});
         visible=false;
         if(PreferencesRegression.run()) applySettings();
@@ -130,7 +138,7 @@ class FeaturesView extends Object {
     public function click(x:Float,y:Float):Void {
         for(b in buttons)if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){b.action();refresh();return;}
     }
-    public function update():Void {if(AudioRegression.isRunning)AudioRegression.update();if(visible)refresh();}
+    public function update():Void {if(ReliabilityRegression.isRunning)ReliabilityRegression.update();if(AudioRegression.isRunning)AudioRegression.update();if(visible)refresh();}
     function sampleText(kind:SensorKind,name:String,enabled:Bool):String {
         if(!Sensors.available(kind))return name+' unavailable';
         var sample=Sensors.sample(kind);

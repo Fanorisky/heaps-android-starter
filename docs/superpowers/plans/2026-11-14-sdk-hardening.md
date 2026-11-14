@@ -32,3 +32,6 @@ JNIepoch/signature/lockorder,rawchannelwalltime/userpause,latehealth/staleManage
 F1 INCORPORATED — explicit ManagerAfterPlay hook and raw/wrapper intent/focus semantics.
 F2 INCORPORATED — independent SDK-active/window/foreground gate inputs with synchronous loss and no gain autoresume.
 F3 INCORPORATED — one atomic Java session dispatch/publication boundary, epoch-owned resources and stale cleanup protection.
+
+## Review refinements
+Whole review: Actions now fetches full history for frozen patch baseline; patch matrix populated exactrevisions/targets; stress independently readsnativebackgroundsnapshot pluslastforeground-frame channelpositions, neverafter-returnbaseline.

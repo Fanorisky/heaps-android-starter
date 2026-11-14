@@ -20,12 +20,12 @@ if args.serial:ADB+=['-s',args.serial]
 OUT=ROOT/'dist/verification';OUT.mkdir(parents=True,exist_ok=True)
 controls=json.loads((ROOT/'tests/demo/features-controls.json').read_text())['centers']
 def adb(*arguments,binary=False):return subprocess.check_output(ADB+list(arguments),text=not binary,timeout=30)
-def logs():return adb('logcat','-d','-v','brief','hl:D','AndroidRuntime:E','libc:F','*:S')
+def logs():return adb('logcat','-d','-v','brief','hl:D','HeapsAndroid:D','AndroidRuntime:E','libc:F','*:S')
 def wait_for(pattern,seconds=20):
  end=time.monotonic()+seconds
  while time.monotonic()<end:
   value=logs()
-  if 'Fatal signal' in value or 'FATAL EXCEPTION' in value or 'engine error:' in value:raise AssertionError(value)
+  if 'Fatal signal' in value or 'FATAL EXCEPTION' in value or 'engine error:' in value or 'RELIABILITY_TEST_FAIL' in value or 'AUDIO_TEST_FAIL' in value:raise AssertionError(value)
   found=re.search(pattern,value)
   if found:return found.group(0)
   time.sleep(.3)
@@ -49,6 +49,18 @@ try:
  assert result.startswith('AUDIO_TEST_PASS'),result
  capture('sdk-audio-checks')
  if not args.audio_only:
+  tap('reliabilityChecks')
+  for cycle in range(10):
+   wait_for('RELIABILITY_READY cycle='+str(cycle),seconds=25)
+   before=len(re.findall(r'HEAPS_BACKGROUND epoch=',logs()))
+   adb('shell','input','keyevent','KEYCODE_HOME');time.sleep(1)
+   background=re.findall(r'HEAPS_BACKGROUND epoch=(\d+) audio=(\d+) lifecycle=(\d+) sensors=(\d+) text=(\d+)',logs())
+   assert len(background)>before,'Missing independent background snapshot'
+   epoch,audio,lifecycle,sensors,text=map(int,background[-1])
+   assert audio!=2 and lifecycle&1==0 and sensors==0 and text==0,background[-1]
+   launch();time.sleep(.5)
+  stress=wait_for(r'RELIABILITY_TEST_(?:PASS|FAIL)[^\n]+',seconds=25)
+  assert stress.startswith('RELIABILITY_TEST_PASS'),stress
   tap('musicPlay');wait_for('Looping music requested');time.sleep(.7)
   (OUT/'audioflinger-running.txt').write_text(adb('shell','dumpsys','media.audio_flinger'))
   tap('keyboardShow');time.sleep(.7)
@@ -71,7 +83,7 @@ try:
   assert adb('shell','run-as',package,'cat','files/heaps-android-settings.json')==prefs,'Preferences changed after process restart'
  log=logs();assert 'Fatal signal' not in log and 'FATAL EXCEPTION' not in log,log
  (OUT/'sdk-logcat.txt').write_text(log)
- (OUT/'sdk-report.json').write_text(json.dumps({'application':info,'audioChecks':result,'audioOnly':args.audio_only,'hardwareAbi':adb('shell','getprop','ro.product.cpu.abi').strip()},indent=2)+'\n')
+ (OUT/'sdk-report.json').write_text(json.dumps({'application':info,'audioChecks':result,'audioOnly':args.audio_only,'stressChecks':None if args.audio_only else stress,'hardwareAbi':adb('shell','getprop','ro.product.cpu.abi').strip()},indent=2)+'\n')
  print('PASS Android proof: '+result)
 except Exception:
  (OUT/'sdk-failure-logcat.txt').write_text(logs());capture('sdk-failure');raise

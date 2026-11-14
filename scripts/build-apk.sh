@@ -7,6 +7,8 @@ case "$variant" in proof) build_task=assembleProof ;; debug) build_task=assemble
 ./scripts/setup-toolchain.sh
 ./scripts/test-pure.sh
 ./scripts/test-native-host.sh
+./scripts/test-java-platform.sh
+python3 scripts/test-patches.py
 ./scripts/generate-assets.sh --check
 ./scripts/generate-hlc.sh
 export ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"

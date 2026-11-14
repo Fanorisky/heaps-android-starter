@@ -58,6 +58,10 @@ android {
         }
     }
     sourceSets.main.java.srcDirs += ["${rootDir}/vendor/sdl/android-project/app/src/main/java"]
+    if (project.hasProperty('androidReliabilityFixtures')) {
+        sourceSets.main.java.srcDirs += ["${rootDir}/tests/android/java"]
+        sourceSets.main.manifest.srcFile("${rootDir}/tests/android/fixture-manifest.xml")
+    }
     externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.30.3' } }
     buildFeatures { buildConfig true }
     signingConfigs {
@@ -90,6 +94,8 @@ android {
 def generateHlc = tasks.register('generateHlc', Exec) {
     workingDir rootDir
     commandLine 'bash', 'scripts/generate-hlc.sh'
+    environment 'HEAPS_AUDIO_FAULT_TESTS', project.hasProperty('androidAudioFaultTests') ? 'true' : 'false'
+    inputs.property('audioFaultTests', project.hasProperty('androidAudioFaultTests'))
     inputs.files(fileTree("${rootDir}/src"), fileTree("${rootDir}/lib"), fileTree("${rootDir}/assets"), fileTree("${rootDir}/tests/android"), file("${rootDir}/game.hxml"))
     outputs.dir("${rootDir}/build/hlc")
 }

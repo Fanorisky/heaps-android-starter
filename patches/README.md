@@ -1,18 +1,30 @@
-# Reproducible compatibility patches
+# Patch ownership and upgrade checks
 
-Setup applies these patches in order and recognizes already-applied patches. Source archives remain checksum-pinned.
+All native sources are checksum-pinned. A patch is a maintained compatibility change; a passing old build does not establish compatibility with a newer upstream revision.
 
-1. **Heaps hlsdl version guards.** Current Heaps references GPU readback and elapsed-time query APIs absent from hlsdl1.15. On that version, these optional calls throw an explicit unsupported-version error; ordinary 2D rendering is unchanged.
-2. **HashLink Android native support.** Android's backend includes the GLES3.2 declaration header for the real APIs compiled into the bindings. GLES does not provide desktop `glShaderStorageBlockBinding`; that optional call reports an unsupported-platform error. AndroidAPI24 lacks libc's API33 `backtrace` APIs, so the entry code uses `_Unwind_Backtrace` and `dladdr` for real stack capture/symbol resolution.
-3. **Haxe/C SDL entry.** Modern Haxe code generation no longer defines the legacy `sdl__Sdl__val` macro tested by HashLink1.15. CMake explicitly selects `HL_SDL`, causing the upstream entry code to include SDL_main.h and export SDL_main.
-4. **ARM64 debugger trap.** Backport an ARM64 `brk` breakpoint instruction before the old Linux/x86 `int3` branch. This preserves debugger trapping instead of disabling it.
+| Patch | Exact source revision | Target files | Reason | Regression owner | Upstream status |
+|---|---|---|---|---|---|
+| 001-heaps-hlsdl-version-guards.patch | heaps@3a970d27505131d00b2efd912511a1de094b374a | heaps/h3d/impl/GlDriver.hx | Older hlsdl optional GPU APIs | HLC generation + Android render | local; upstream submission unverified |
+| 002-hashlink-android-native.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/libs/sdl/gl.c, hashlink/src/hlc_main.c | Android GLES/stack trace compatibility | All ABI compile + native startup | local; upstream submission unverified |
+| 003-hashlink-hlc-sdl-entry.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/src/hlc_main.c | Modern HLC SDL entry selection | APK SDL_main symbol gate | local; upstream submission unverified |
+| 004-hashlink-arm64-breakpoint.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/src/hl.h | ARM64 breakpoint instruction | All ABI native compile | local; upstream submission unverified |
+| 005-hashlink-private-storage-jni.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/src/std/sys_android.c | Android private storage JNI signature | Android private preferences tests | local; upstream submission unverified |
+| 006-heaps-vec4-uniform-count.patch | heaps@3a970d27505131d00b2efd912511a1de094b374a | heaps/h3d/impl/GlDriver.hx | Correct vec4 uniform count | Visible renderer + ABI build | local; upstream submission unverified |
+| 007-hashlink-android-fullscreen.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/libs/sdl/sdl.c | Android fullscreen creation | Android display flags | local; upstream submission unverified |
+| 008-hashlink-android-arm32-breakpoint.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/src/hl.h | ARM32 breakpoint dispatch | ARM32 compile/install evidence | local; upstream submission unverified |
+| 009-hashlink-sdl-complete-text.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/libs/sdl/sdl.c, hashlink/libs/sdl/utf8_packet.h | Complete/cancellable UTF8 text events | Platform native UTF8/cancel regressions | local; upstream submission unverified |
+| 010-hashlink-openal-device-lifetime.patch | hashlink@742581569d4052babac359658e443e42c7c3e0c7 | hashlink/libs/openal/openal.c | OpenAL device lifetime close integration | Audio native lifetime tests | local; upstream submission unverified |
+| 011-heaps-openal-checked-construction.patch | heaps@3a970d27505131d00b2efd912511a1de094b374a | heaps/hxd/snd/openal/Driver.hx | Checked OpenAL construction/disposal | AudioRegression partial constructor test | local; upstream submission unverified |
+| 012-heaps-audio-manager-construction-cleanup.patch | heaps@3a970d27505131d00b2efd912511a1de094b374a | heaps/hxd/snd/Manager.hx | Manager partial allocation cleanup | AudioRegression source-exhaustion test | local; upstream submission unverified |
+| 013-sdl-android-standard-utf8-ime.patch | sdl@5d249570393f7a37e037abf22cd6012a4cc56a71 | sdl/src/core/android/SDL_android.c, sdl/src/core/android/SDL_heaps_utf16.h | JNI UTF16 to standard UTF8 ingress | Native UTF16/UTF8 ingress tests | local; upstream submission unverified |
+| 014-heaps-android-audio-channel-hooks.patch | heaps@3a970d27505131d00b2efd912511a1de094b374a | heaps/hxd/snd/Manager.hx, heaps/hxd/snd/Channel.hx | Conditional SDK raw channel/lifecycle protection | RawAudioRegression/AudioHealthRegression + native gate | local; upstream submission unverified |
 
-Native format and mesh bindings use upstream implementations. HashLink's official non-Windows UI fallback is linked for its desktop error-dialog/sentinel references; the game's visible UI is implemented in Heaps.
+## Validate before upgrading
 
-5. **Private storage JNI.** Correct Context.getFilesDir to its no-argument signature, invoke no-argument methods without an extra argument, and return unavailable storage safely on JNI lookup/call errors. The original HashLink1.15 implementation used the getExternalFilesDir signature for both paths.
+`python3 scripts/test-patches.py` uses verified archives in isolated temporary directories. It tests fresh extraction, a second idempotent application, upgrading the published v0.2.0 patch set (`36a15d9`) to the current set, and explicit rejection of an incompatible target. The running application's `vendor/` is not changed by these tests.
 
-6. **Heaps vec4 uniform count.** Shader buffer sizes are vec4 counts (the backing float buffer is size×4). glUniform4fv expects vec4 count. Correct the caller to pass size, avoiding GL_INVALID_OPERATION and blank output when a single-vec4 parameter uniform is used. Native uniform APIs retain their original contract.
+For an upstream update, create a branch; update one dependency lock at a time; inspect every patch against that exact revision; preserve or remove each patch only after its owning regression passes; then run pure/native/Java, all-ABI build, APK and Android checks. Record removal/upstream commit in this matrix. Do not silently fall back to another native version.
 
-7. **Android fullscreen.** Set SDL_WINDOW_FULLSCREEN when creating the Android SDL window, so SDL does not override the fullscreen activity theme with a windowed surface. This gives the game and touch mapping the same full-display viewport.
+If setup reports “neither applicable nor already applied”, retain the logs and source before re-extracting that one dependency from the locked archive. Do not delete application data or signing keys. `vendor/` is generated source; edits there are disposable unless captured as reviewed patches. Preserve exact line endings/context for idempotent upgrades.
 
-8. **Android ARM32 debugger trap.** Add the 32-bit Android `SIGTRAP` branch ahead of Linux/x86 assembly. This patch leaves the published ARM64 patch unchanged and uses disjoint context, so existing extractions update safely and setup remains idempotent.
+The automated matrix covers the pinned stack and published-old extraction. It does not claim arbitrary future Heaps/HashLink/SDL upgrades are safe.
