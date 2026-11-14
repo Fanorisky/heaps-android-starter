@@ -17,5 +17,5 @@ class Lifecycle {
  @:allow(heapsandroid.Android) static function ingest(event:Int) store.ingest(event);
  @:allow(heapsandroid.Android) static function reconcile(snapshot:Int) store.reconcile(snapshot);
  @:allow(heapsandroid.Android) static function dispatch() store.dispatch();
- @:allow(heapsandroid.Android) static function reset() store = new LifecycleStore();
+ @:allow(heapsandroid.Android) static function reset() store.reset();
 }

@@ -1,9 +1,11 @@
 #include "platform_state.h"
+#include "session_epoch.h"
 #include "utf8_packet.h"
 #include "SDL_heaps_utf16.h"
 #include <cassert>
 #include <cstring>
 #include <thread>
+#include <atomic>
 #include <iostream>
 static void commit(const unsigned char *s, size_t n, const uint32_t *want, size_t count) {
  size_t p=0, i=0; uint32_t packed;
@@ -11,6 +13,22 @@ static void commit(const unsigned char *s, size_t n, const uint32_t *want, size_
  assert(i==count);
 }
 int main() {
+ heapsandroid::SessionEpoch epochs;
+ int published=0;
+ assert(epochs.start(11,[&]{published=1;}));
+ assert(epochs.run(11,[&]{published=2;}));
+ assert(epochs.stop(11,[&]{published=3;}));
+ assert(!epochs.run(11,[&]{published=99;}));
+ assert(!epochs.start(11,[&]{published=99;}));
+ assert(epochs.start(12,[&]{published=4;}));
+ assert(!epochs.stop(11,[&]{published=99;}));
+ assert(!epochs.run(11,[&]{published=99;}));
+ assert(published==4);
+ std::atomic<bool> entered(false), release(false);
+ std::thread epochWriter([&]{epochs.run(12,[&]{entered=true;while(!release.load())std::this_thread::yield();published=5;});});
+ while(!entered.load())std::this_thread::yield();
+ std::thread epochStop([&]{epochs.stop(12,[&]{assert(published==5);published=6;});});
+ release=true;epochWriter.join();epochStop.join();assert(published==6);
  const uint16_t pasted[]={0x70,0x61,0x73,0x74,0x65,0x64,0x20,0xe9,0x4e2d,0xd83d,0xde00};
  char encoded[40];size_t encodedLength=0;
  assert(SDL_HeapsUTF16ToUTF8(pasted,11,encoded,sizeof(encoded),&encodedLength));
@@ -73,5 +91,9 @@ int main() {
  assert(!state.readSensor(0,packet));
  std::thread writer([&] {for(int i=1;i<=20000;i++) state.publishSensor(0,i,i,i,i);});
  for(int i=0;i<20000;i++) if(state.readSensor(0,packet)) {memcpy(&x,packet,8);memcpy(&y,packet+8,8);memcpy(&z,packet+16,8);memcpy(&timestamp,packet+24,8);assert(x==y&&y==z&&z==timestamp);}
- writer.join(); std::cout << "Platform native checks passed\n";
+ writer.join();
+ state.setDisplay(true,true);state.reset();
+ assert(state.lifecycleState()==0 && state.poll()==-1 && !state.sensorRequested(0));
+ assert(!state.immersive() && !state.keepAwake());
+ std::cout << "Platform native checks passed\n";
 }

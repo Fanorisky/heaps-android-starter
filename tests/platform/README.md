@@ -26,3 +26,34 @@ use `-main StartupRegression`. In `hxd.App.init`, before the first MainLoop tick
 it checks synchronized lifecycle state/callback ordering and creation of a real
 music channel. It reports `ANDROID_STARTUP_TEST_PASS` or `FAIL` in Android logs.
 Compilation alone does not establish these runtime checks.
+
+Run `tests/platform/run-java.sh` for Android-free tests of the **production**
+`NativeDispatch`, `SessionDispatch`, and `RouteTracker` helpers. The fixture
+forces unavailable native libraries, verifies no callback is dispatched,
+restarts the SDK using the retained Activity foreground/window snapshot, and
+rejects old sensor/display/route/focus/cleanup identities. A blocked callback
+holds the actual dispatch monitor while a concurrent stop attempts publication;
+stop must wait until that callback finishes. Output device IDs are compared as
+sets, so initial, duplicate and reordered callback batches do not signal a
+route change. The native fixture also exercises the production `SessionEpoch`
+second boundary with stale start/stop/callbacks and concurrent publication.
+These tests establish dispatch and identity behavior; they do not emulate
+Android hardware or prove a real Bluetooth/headset transition.
+
+`Android.shutdown()` reversibly suspends SDK services and audio channels.
+`Android.init()` creates a fresh native/Java epoch in the same live Activity;
+subscriptions survive, and audio remains paused until explicit playback intent.
+`Audio.shutdown()` remains the separate terminal audio-resource cleanup API.
+`HeapsActivity.onDestroy()` terminally destroys its service owner. All our JNI
+callbacks prepend a 64-bit epoch; native start publishes foreground/window
+snapshots before SDK-active, and stop clears SDK-active before invalidation.
+Output route generation is process-monotonic (saturating at signed Int max),
+read through `Native.routeGeneration()` on the Haxe thread and never reset by
+SDK shutdown/init. No Java callback invokes Haxe.
+
+The library failure guard is initialized only after `SDLActivity.onCreate`
+returns and requires `!SDLActivity.mBrokenLibraries`. The helper fixture tests
+that exact production guard; a corrupt/missing-library APK additionally tests
+SDL's real error Activity path and must report no `UnsatisfiedLinkError` from
+our lifecycle callbacks. A host class-load/callback counter alone is not proof
+that SDL's error dialog appears on a device.

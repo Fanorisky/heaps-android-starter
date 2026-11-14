@@ -11,11 +11,14 @@ import org.libsdl.app.SDLActivity;
 public final class HeapsActivity extends SDLActivity {
     private static volatile HeapsActivity current;
     private PlatformServices services;
+    private volatile boolean librariesReady;
+    private final NativeDispatch nativeDispatch = new NativeDispatch(() -> librariesReady && !mBrokenLibraries);
 
     @Override public void onCreate(Bundle savedInstanceState) {
         current = this;
-        services = new PlatformServices(this);
+        services = new PlatformServices(this, nativeDispatch);
         super.onCreate(savedInstanceState);
+        librariesReady = !mBrokenLibraries;
     }
     public static Context getContext() { return current; }
     @Override protected String[] getLibraries() {
@@ -37,8 +40,9 @@ public final class HeapsActivity extends SDLActivity {
         if (hasFocus && services != null) services.reapplyDisplay();
     }
     @Override protected void onDestroy() {
-        if (services != null) services.shutdown();
+        if (services != null) services.destroy();
         super.onDestroy();
+        librariesReady = false;
         if (current == this) current = null;
     }
     void hideIme() {
@@ -53,7 +57,7 @@ public final class HeapsActivity extends SDLActivity {
         }
     }
     // Called synchronously through JNI from the SDL thread; UI changes are posted.
-    public void cancelKeyboard() { runOnUiThread(this::hideIme); }
+    public void cancelKeyboard() { services.cancelKeyboard(); }
     public boolean configuredImmersive() { return BuildConfig.DISPLAY_IMMERSIVE; }
     public String configuredOrientation() { return BuildConfig.APP_ORIENTATION; }
     public void initializeServices() { services.initialize(); }

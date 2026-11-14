@@ -40,7 +40,7 @@ class PlatformState {
  void setDisplay(bool immersive,bool awake) {std::lock_guard<std::mutex> g(lock);displayImmersive=immersive;displayAwake=awake;}
  bool immersive() const {std::lock_guard<std::mutex> g(lock);return displayImmersive;}
  bool keepAwake() const {std::lock_guard<std::mutex> g(lock);return displayAwake;}
- void reset() {std::lock_guard<std::mutex> g(lock);fg=focus=false;head=count=0;for(auto &s:sensors)s=SensorSlot();}
+ void reset() {std::lock_guard<std::mutex> g(lock);fg=focus=displayImmersive=displayAwake=false;head=count=0;for(auto &s:sensors)s=SensorSlot();}
 };
 }
 #endif

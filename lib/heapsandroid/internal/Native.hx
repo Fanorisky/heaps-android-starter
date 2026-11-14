@@ -1,6 +1,7 @@
 package heapsandroid.internal;
 /** Genuine Android/HashLink primitives. Calls originate on the SDL game thread. */
 extern class Native {
+ @:hlNative("heapsandroid", "route_generation") public static function routeGeneration():Int;
  @:hlNative("heapsandroid", "prepare") public static function prepare():Void;
  @:hlNative("heapsandroid", "init") public static function init():Void;
  @:hlNative("heapsandroid", "shutdown") public static function shutdown():Void;

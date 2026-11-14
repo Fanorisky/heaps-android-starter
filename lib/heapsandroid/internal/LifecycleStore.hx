@@ -7,6 +7,7 @@ class LifecycleStore {
  public var focused(default,null) = false;
  var listeners:Array<Listener> = [];
  var events:Array<LifecycleEvent> = [];
+ var generation = 0;
  public function new() {}
  public function subscribe(callback:LifecycleEvent->Void):Void->Void {
   if(callback == null) throw "Lifecycle callback is null";
@@ -38,8 +39,19 @@ class LifecycleStore {
   if(foreground != nextForeground) ingest(nextForeground ? 0 : 1);
   if(focused != nextFocused) ingest(nextFocused ? 2 : 3);
  }
+ /** Reversible SDK stop preserves subscribers but discards queued session events. */
+ public function reset():Void {
+  generation++;
+  events = [];
+  reconcile(0);
+  dispatch();
+ }
  public function dispatch():Void {
+  var dispatchGeneration = generation;
   var pending = events; events = [];
-  for(event in pending) for(listener in listeners.copy()) if(listener.active) listener.callback(event);
+  for(event in pending) for(listener in listeners.copy()) {
+   if(generation != dispatchGeneration) return;
+   if(listener.active) listener.callback(event);
+  }
  }
 }

@@ -10,6 +10,7 @@ class ApiCompile {
   Sensors.enable(Accelerometer); Sensors.disable(Gyroscope); trace(Sensors.available(Gyroscope)); trace(Sensors.sample(Accelerometer));
   Display.setImmersive(false); Display.setKeepAwake(false); trace(Display.immersive); trace(Display.keepAwake); trace(Display.safeInsets);
   trace(Device.info()); trace(heapsandroid.internal.Native.filesPath()); trace(heapsandroid.internal.Native.cachePath());
-  Android.shutdown();
+  trace(heapsandroid.internal.Native.routeGeneration());
+  Android.shutdown(); Android.init(); Android.shutdown();
  }
 }

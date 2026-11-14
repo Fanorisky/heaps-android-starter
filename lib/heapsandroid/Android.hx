@@ -13,6 +13,7 @@ class Android {
  public static function init():Void {
   if(initialized) return;
   prepare(); Native.init(); initialized = true;
+  Audio.bindToSdk();
   // Startup playback may run before the first MainLoop tick.
   update();
   pump = haxe.MainLoop.add(update, 100); pump.isBlocking = false;
@@ -34,7 +35,7 @@ class Android {
   if(!initialized) return;
   initialized = false;
   if(pump != null) {pump.stop(); pump = null;}
-  Audio.shutdown();
+  Audio.suspendForSdk();
   Keyboard.hide();
   Sensors.disable(Accelerometer); Sensors.disable(Gyroscope);
   Haptics.cancel(); Native.abandonAudioFocus(); Native.shutdown();

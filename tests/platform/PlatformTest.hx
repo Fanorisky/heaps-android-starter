@@ -36,6 +36,28 @@ class PlatformTest {
   focusOverflow.subscribe(e -> focusEvents.push(e)); focusOverflow.ingest(2);
   for(i in 0...1000) focusOverflow.ingest(i % 2 == 0 ? 0 : 1);
   focusOverflow.reconcile(2); focusOverflow.dispatch(); eq(focusEvents[0], 2);
+  var interrupted = new LifecycleStore(); var interruptedEvents:Array<Int> = [];
+  interrupted.subscribe(event -> {
+   interruptedEvents.push(event);
+   if((event:Int) == 0) interrupted.reset();
+  });
+  interrupted.ingest(0); interrupted.ingest(2); interrupted.dispatch();
+  eq(interruptedEvents.join(","), "0,1,3");
+  var resetPending = new LifecycleStore(); var afterReset:Array<Int> = [];
+  resetPending.subscribe(event -> afterReset.push(event));
+  resetPending.ingest(0); resetPending.ingest(2); resetPending.reset();
+  eq(afterReset.join(","), "1,3");
+  eq(resetPending.foreground, false); eq(resetPending.focused, false);
+  // SDK shutdown resets lifecycle state, while subscriptions survive a same-Activity restart.
+  var sdkEvents:Array<Int> = [];
+  var unsubscribeSdk = heapsandroid.Lifecycle.subscribe(event -> sdkEvents.push(event));
+  @:privateAccess heapsandroid.Lifecycle.ingest(0);
+  @:privateAccess heapsandroid.Lifecycle.dispatch();
+  @:privateAccess heapsandroid.Lifecycle.reset();
+  @:privateAccess heapsandroid.Lifecycle.ingest(0);
+  @:privateAccess heapsandroid.Lifecycle.dispatch();
+  eq(sdkEvents[sdkEvents.length-1], 0); eq(sdkEvents.length, 3);
+  unsubscribeSdk();
   var b = haxe.io.Bytes.alloc(32);
   b.setDouble(0, 1.5); b.setDouble(8, -2.25); b.setDouble(16, 0.125);
   b.setInt32(24, 0x89ABCDEF); b.setInt32(28, 0x12345678);

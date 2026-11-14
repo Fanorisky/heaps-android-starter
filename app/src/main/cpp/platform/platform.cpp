@@ -8,10 +8,13 @@
 #include <string>
 #include "audio_gate.h"
 #include "platform_state.h"
+#include "session_epoch.h"
 
 extern "C" void sdl_cancel_text_input(void);
 namespace {
 heapsandroid::PlatformState state;
+heapsandroid::SessionEpoch sessions;
+std::atomic<int> routeGeneration(0);
 std::mutex insetLock;
 int insets[4] = {};
 std::atomic<bool> initialized(false);
@@ -51,20 +54,42 @@ vbyte *bytes(const std::string &text){vbyte *out=hl_alloc_bytes((int)text.size()
 SDL_Window *window(){SDL_Window *w=SDL_GetKeyboardFocus();if(!w)w=SDL_GetMouseFocus();if(!w)w=SDL_GetWindowFromID(1);return w;}
 }
 
-// Callback exports: native state and the locked audio gate only; no GC allocation.
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeForeground(JNIEnv*,jclass,jboolean value){
- audio_set_foreground(value?1:0);
- state.setForeground(value!=0);
- if(!value){sdl_cancel_text_input();SDL_FlushEvent(SDL_KEYDOWN);SDL_FlushEvent(SDL_FINGERDOWN);SDL_FlushEvent(SDL_FINGERMOTION);}
+// Callback exports: session -> native state/audio lifetime; no GC allocation.
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeStart(JNIEnv*,jclass,jlong epoch,jboolean fg,jboolean focus){
+ sessions.start(epoch,[&]{
+  audio_set_sdk_active(0);state.reset();
+  {std::lock_guard<std::mutex> g(insetLock);memset(insets,0,sizeof(insets));}
+  audio_set_foreground(fg?1:0);state.setForeground(fg!=0);
+  audio_set_window_focus(focus?1:0);state.setFocused(focus!=0);
+  audio_set_sdk_active(1); // Publish eligibility LAST, synchronously before Android.init returns.
+ });
 }
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeWindowFocus(JNIEnv*,jclass,jboolean value){state.setFocused(value!=0);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeBeginFocus(JNIEnv*,jclass,jint generation){audio_begin_focus_request(generation);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeAudioFocus(JNIEnv*,jclass,jint generation,jboolean value){audio_set_focus(generation,value?1:0);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeAbandonFocus(JNIEnv*,jclass,jint generation){audio_abandon_focus(generation);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeSensorActive(JNIEnv*,jclass,jint kind,jboolean active){state.sensorActive(kind,active!=0);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeSensor(JNIEnv*,jclass,jint kind,jdouble x,jdouble y,jdouble z,jlong timestamp){state.publishSensor(kind,x,y,z,timestamp);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeDisplay(JNIEnv*,jclass,jboolean immersive,jboolean awake){state.setDisplay(immersive!=0,awake!=0);}
-extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeInsets(JNIEnv*,jclass,jint left,jint top,jint right,jint bottom){std::lock_guard<std::mutex> g(insetLock);insets[0]=left;insets[1]=top;insets[2]=right;insets[3]=bottom;}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeStop(JNIEnv*,jclass,jlong epoch){
+ sessions.stop(epoch,[&]{
+  audio_set_sdk_active(0); // Silence output and invalidate intent FIRST.
+  audio_set_foreground(0);audio_set_window_focus(0);
+  state.reset();initialized=false;sdl_cancel_text_input();
+  {std::lock_guard<std::mutex> g(insetLock);memset(insets,0,sizeof(insets));}
+ });
+}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeForeground(JNIEnv*,jclass,jlong epoch,jboolean value){
+ sessions.run(epoch,[&]{
+  audio_set_foreground(value?1:0);state.setForeground(value!=0);
+  if(!value){sdl_cancel_text_input();SDL_FlushEvent(SDL_KEYDOWN);SDL_FlushEvent(SDL_FINGERDOWN);SDL_FlushEvent(SDL_FINGERMOTION);}
+ });
+}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeWindowFocus(JNIEnv*,jclass,jlong epoch,jboolean value){sessions.run(epoch,[&]{audio_set_window_focus(value?1:0);state.setFocused(value!=0);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeBeginFocus(JNIEnv*,jclass,jlong epoch,jint generation){sessions.run(epoch,[&]{audio_begin_focus_request(generation);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeAudioFocus(JNIEnv*,jclass,jlong epoch,jint generation,jboolean value){sessions.run(epoch,[&]{audio_set_focus(generation,value?1:0);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeAbandonFocus(JNIEnv*,jclass,jlong epoch,jint generation){sessions.run(epoch,[&]{audio_abandon_focus(generation);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeSensorActive(JNIEnv*,jclass,jlong epoch,jint kind,jboolean active){sessions.run(epoch,[&]{state.sensorActive(kind,active!=0);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeSensor(JNIEnv*,jclass,jlong epoch,jint kind,jdouble x,jdouble y,jdouble z,jlong timestamp){sessions.run(epoch,[&]{state.publishSensor(kind,x,y,z,timestamp);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeDisplay(JNIEnv*,jclass,jlong epoch,jboolean immersive,jboolean awake){sessions.run(epoch,[&]{state.setDisplay(immersive!=0,awake!=0);});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeInsets(JNIEnv*,jclass,jlong epoch,jint left,jint top,jint right,jint bottom){sessions.run(epoch,[&]{std::lock_guard<std::mutex> g(insetLock);insets[0]=left;insets[1]=top;insets[2]=right;insets[3]=bottom;});}
+extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeRouteChanged(JNIEnv*,jclass,jlong epoch){sessions.run(epoch,[&]{
+ int generation=routeGeneration.load();if(generation<INT32_MAX)routeGeneration.store(generation+1);
+ audio_route_changed();
+});}
 
 HL_PRIM void HL_NAME(prepare)(){
  JavaCall java;std::string orientation=java.string("configuredOrientation");
@@ -76,9 +101,10 @@ HL_PRIM void HL_NAME(init)(){
  JavaCall java;SDL_Window *w=window();if(w)SDL_SetWindowFullscreen(w,java.boolean("configuredImmersive")?SDL_WINDOW_FULLSCREEN_DESKTOP:0);
  java.call("initializeServices");
 }
-HL_PRIM void HL_NAME(shutdown)(){if(!initialized.exchange(false))return;JavaCall java;java.call("shutdownServices");state.reset();}
+HL_PRIM void HL_NAME(shutdown)(){if(!initialized.exchange(false))return;JavaCall java;java.call("shutdownServices");}
 HL_PRIM int HL_NAME(poll_lifecycle)(){return state.poll();}
 HL_PRIM int HL_NAME(lifecycle_state)(){return state.lifecycleState();}
+HL_PRIM int HL_NAME(route_generation)(){return routeGeneration.load();}
 HL_PRIM bool HL_NAME(keyboard_show)(int x,int y,int width,int height){
  if(!(state.lifecycleState()&1))return false;
  SDL_Window *w=window();if(!w||!SDL_HasScreenKeyboardSupport())return false;
@@ -125,6 +151,7 @@ DEFINE_PRIM(_VOID,init,_NO_ARG);
 DEFINE_PRIM(_VOID,shutdown,_NO_ARG);
 DEFINE_PRIM(_I32,poll_lifecycle,_NO_ARG);
 DEFINE_PRIM(_I32,lifecycle_state,_NO_ARG);
+DEFINE_PRIM(_I32,route_generation,_NO_ARG);
 DEFINE_PRIM(_BOOL,keyboard_show,_I32 _I32 _I32 _I32);
 DEFINE_PRIM(_VOID,keyboard_hide,_NO_ARG);
 DEFINE_PRIM(_BOOL,keyboard_active,_NO_ARG);
