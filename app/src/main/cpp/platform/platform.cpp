@@ -3,6 +3,7 @@
 #include <SDL.h>
 #include <SDL_system.h>
 #include <jni.h>
+#include <android/log.h>
 #include <atomic>
 #include <cstring>
 #include <string>
@@ -74,8 +75,19 @@ extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeS
 }
 extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeForeground(JNIEnv*,jclass,jlong epoch,jboolean value){
  sessions.run(epoch,[&]{
+  bool backgroundTransition=!value && (state.lifecycleState()&1)!=0;
   audio_set_foreground(value?1:0);state.setForeground(value!=0);
   if(!value){sdl_cancel_text_input();SDL_FlushEvent(SDL_KEYDOWN);SDL_FlushEvent(SDL_FINGERDOWN);SDL_FlushEvent(SDL_FINGERMOTION);}
+  if(backgroundTransition){
+   unsigned char sensorPacket[32];
+   int sensorSamples=(state.readSensor(0,sensorPacket)?1:0)|(state.readSensor(1,sensorPacket)?2:0);
+   // Observe the paused callback state while SDL's game thread may be suspended.
+   // peekState never probes OpenAL health or allocates HashLink objects.
+   __android_log_print(ANDROID_LOG_INFO,"HeapsAndroid",
+    "HEAPS_BACKGROUND epoch=%lld audio=%d lifecycle=%d sensors=%d text=%d",
+    static_cast<long long>(epoch),audio_peek_state(),state.lifecycleState(),sensorSamples,
+    SDL_IsTextInputActive()==SDL_TRUE?1:0);
+  }
  });
 }
 extern "C" JNIEXPORT void JNICALL Java_io_heaps_android_PlatformServices_nativeWindowFocus(JNIEnv*,jclass,jlong epoch,jboolean value){sessions.run(epoch,[&]{audio_set_window_focus(value?1:0);state.setFocused(value!=0);});}
