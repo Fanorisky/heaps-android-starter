@@ -28,10 +28,30 @@ class AudioHealthRegression {
             called = true;
             check(Audio.recover(), "Recovery from route callback failed");
         });
-        @:privateAccess Audio.observedRoute = Audio.routeGeneration - 1;
-        try previous.update() catch (error:Dynamic) { unsubscribe(); throw error; }
+        var initialRoute = Audio.routeGeneration;
+        // Negative observations are Audio's uninitialized-baseline sentinel.
+        // Keep this deliberately unequal fixture observation nonnegative,
+        // including the normal startup generation zero.
+        var seededRoute = initialRoute == 0 ? 1 : 0;
+        @:privateAccess Audio.observedRoute = seededRoute;
+        try previous.update() catch (error:Dynamic) {
+            unsubscribe();
+            Sys.println("AUDIO_HEALTH_ROUTE updateError=" + Std.string(error) + " initial=" + initialRoute
+                + " seeded=" + seededRoute + " callback=" + called + " state=" + Audio.state + " error=" + Audio.error);
+            throw error;
+        }
         unsubscribe();
-        check(called && (@:privateAccess hxd.snd.Manager.instance) != previous && Audio.state == Paused, "Route subscriber did not safely replace its executing Manager");
+        var replacement = @:privateAccess hxd.snd.Manager.instance;
+        var replaced = replacement != null && replacement != previous;
+        var recoveredState = Audio.state;
+        var recoveredError = Audio.error;
+        Sys.println("AUDIO_HEALTH_ROUTE initial=" + initialRoute + " seeded=" + seededRoute
+            + " observed=" + (@:privateAccess Audio.observedRoute) + " callback=" + called
+            + " replaced=" + replaced + " state=" + recoveredState + " error=" + recoveredError);
+        check(called, "Route subscriber was not called (initial=" + initialRoute + ", seeded=" + seededRoute + ")");
+        check(replaced, "Route subscriber did not replace its executing Manager");
+        check(recoveredState == Paused && recoveredError == None,
+            "Route recovery did not leave healthy paused audio (state=" + recoveredState + ", error=" + recoveredError + ")");
         channel = sample.play(false);
         stage = 0; deadline = haxe.Timer.stamp() + 0.2;
     }
